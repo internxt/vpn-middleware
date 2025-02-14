@@ -1,8 +1,12 @@
 import { Transform, TransformCallback } from "stream";
 const HTTPParser = require("http-parser-js").HTTPParser;
 
-const CR = 0xd, LF = 0xa, BUF_CR_LF_CR_LF = Buffer.from([0xd, 0xa, 0xd, 0xa]),
-    BUF_LF_LF = Buffer.from([0xa, 0xa])
+const CR = 0xd; // "\r" in decimal
+const LF = 0xa; // "\n" in decimal
+const CRLF = "\r\n";
+const BUFFER_LF_LF = Buffer.from("\n\n");
+const CRLF_BUFFER = Buffer.from(CRLF);
+
 const STATE_NONE = 0, STATE_FOUND_LF = 1, STATE_FOUND_LF_CR = 2;
 
 
@@ -11,38 +15,44 @@ export class HeaderTransform extends Transform {
     private parserData = {
         headersCompleted: false,
         upgrade: null,
-        method: null
+        method: null,
     };
     private state: number;
-    private unsavedStart: number;
-    private test: Buffer;
+    private extraHeaders: Record<string, string> = {};
 
-
-    constructor(buf_proxy_basic_auth: Buffer) {
+    constructor() {
         super();
         this.parser = new HTTPParser(HTTPParser.REQUEST);
-
         this.state = STATE_NONE;
-        this.unsavedStart = 0;
-        this.test = buf_proxy_basic_auth;
+    }
 
+    /**
+     * Add a header to be inserted before the request is forwarded.
+     * @param key - Header name (e.g., "Authorization")
+     * @param value - Header value (e.g., "Bearer token")
+     */
+    addHeader(key: string, value: string) {
+        this.extraHeaders[key] = value;
     }
 
     _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void {
-        this.parser[HTTPParser.kOnHeadersComplete] = (versionMajor, versionMinor, headers, method,
-            url, statusCode, statusMessage, upgrade,
-            shouldKeepAlive) => {
+        if (!this.parser) {
+            this.push(chunk);
+            return callback();
+        }
+
+        this.parser[HTTPParser.kOnHeadersComplete] = (req) => {
             this.parserData.headersCompleted = true;
-            this.parserData.upgrade = upgrade;
-            this.parserData.method = method;
+            this.parserData.upgrade = req.upgrade;
+            this.parserData.method = req.method;
         };
 
-        let lastPushIndex = 0;
-        const buf_len = chunk.length;
-
         // Read chunk to add proxy authorization
-        // It's the same logic as the original repository, but we could try to make it mor readable, that's why I extracted this part
-        for (let i = 0; i < buf_len; i++) {
+        // Reading from buffer directly without converting to string every line is faster
+        // It's almost the same logic as the original repository, I just modified extra headers part
+        let lastPushIndex = 0;
+        const bufferLength = chunk.length;
+        for (let i = 0; i < bufferLength; i++) {
             if (this.state === STATE_NONE) {
                 if (chunk[i] === LF) {
                     this.state = STATE_FOUND_LF;
@@ -52,25 +62,31 @@ export class HeaderTransform extends Transform {
 
             if (chunk[i] === LF) {
                 this.parserData.headersCompleted = false;
-                this.parser.execute(chunk.slice(this.unsavedStart, i + 1));
+                this.parser.execute(chunk.subarray(lastPushIndex, i + 1));
 
                 if (this.parserData.headersCompleted) {
-                    this.push(chunk.slice(lastPushIndex, chunk[i - 1] === CR ? i - 1 : i));
-                    this.push(this.test);
-                    this.push(this.state === STATE_FOUND_LF_CR ? BUF_CR_LF_CR_LF : BUF_LF_LF);
+                    // Extract the original headers buffer (excluding the last CR if present) if \r\n\r\n, we just want \r\n
+                    const headersBuffer = chunk.subarray(lastPushIndex, chunk[i - 1] === CR ? i - 1 : i);
 
-                    // Just use this for debugging, it could try to log binaries
-                    // If you ever want to check if the authorization logs are being added, store in a temp variable the values pushed above and log it
-                    //console.log("Captured Headers:\n", chunk.toString());
+                    //  Ensure each new header ends with \r\n
+                    const extraHeadersString = Object.entries(this.extraHeaders)
+                        .map(([key, value]) => `${key}: ${value}${CRLF}`)
+                        .join("");
+
+                    const extraHeadersBuffer = Buffer.from(extraHeadersString);
+                    const endOfHeadersBuffer = this.state === STATE_FOUND_LF_CR ? CRLF_BUFFER : BUFFER_LF_LF
+
+                    // Separated pushing to prevent creating new buffer by concatenation
+                    this.push(headersBuffer)
+                    this.push(extraHeadersBuffer)
+                    this.push(endOfHeadersBuffer)
 
                     if (this.parserData.method === 5 || this.parserData.upgrade) {
                         this.parser.close();
                         this.parser = null;
-
-                        this.push(chunk.slice(i + 1));
+                        this.push(chunk.subarray(i + 1));
                         this.state = STATE_NONE;
-                        callback();
-                        return;
+                        return callback();
                     }
 
                     lastPushIndex = i + 1;
@@ -85,8 +101,9 @@ export class HeaderTransform extends Transform {
             }
         }
 
-        if (lastPushIndex < buf_len) {
-            const remainingChunk = chunk.slice(lastPushIndex, buf_len);
+        //  Body could be mixed with headers in a chunk, we need to push the remaining buffer
+        if (lastPushIndex < bufferLength) {
+            const remainingChunk = chunk.subarray(lastPushIndex, bufferLength);
             this.parser.execute(remainingChunk);
             this.push(remainingChunk);
         }

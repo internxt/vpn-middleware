@@ -1,6 +1,5 @@
 import * as net from 'net';
 import * as tls from 'tls';
-const HTTPParser = require("http-parser-js").HTTPParser;
 import { config } from 'dotenv';
 import { HeaderTransform } from './header-transform';
 
@@ -14,7 +13,7 @@ const IGNORE_HTTP_CERTS = process.env.IGNORE_HTTP_CERTS;
 const IS_REMOTE_HTTPS = true
 
 
-const createPortForwarder = (local_host, local_port, remote_host, remote_port, buf_proxy_basic_auth, is_remote_https, ignore_https_cert) => {
+const createPortForwarder = (local_host, local_port, remote_host, remote_port, is_remote_https, ignore_https_cert) => {
 
   const requestStatus = {
     haveGotData: false,
@@ -23,14 +22,16 @@ const createPortForwarder = (local_host, local_port, remote_host, remote_port, b
 
   const localProxyServer = net.createServer({ allowHalfOpen: true }, function (socket) {
     const tlsOptions = { port: remote_port, host: remote_host, rejectUnauthorized: !IGNORE_HTTP_CERTS };
+    const authBase64 = Buffer.from(VPN_USERNAME + ':' + VPN_PASSWORD).toString('base64');
     const remoteSocket = tls.connect(tlsOptions);
 
-    const headerTransform = new HeaderTransform(buf_proxy_basic_auth);
+    const headerParser = new HeaderTransform();
+    headerParser.addHeader("Proxy-Authorization", `Basic ${authBase64}`);
 
+    // Incoming data from the socket is transformed and forwarded to the remote server.
+    socket.pipe(headerParser).pipe(remoteSocket);
     // Send data from remote (external vpn) to requester
     remoteSocket.pipe(socket)
-    // Add authorization headers and send data from requester to remote.
-    socket.pipe(headerTransform).pipe(remoteSocket);
 
     remoteSocket.once('data', () => {
       requestStatus.haveGotData = true;
@@ -68,7 +69,8 @@ const createPortForwarder = (local_host, local_port, remote_host, remote_port, b
 
     function cleanup() {
       socketCleanUp = true;
-      remoteSocket.end();
+      remoteSocket.destroy();
+      socket.destroy();
     }
   });
 
@@ -83,9 +85,7 @@ const createPortForwarder = (local_host, local_port, remote_host, remote_port, b
 }
 
 function main() {
-  const basicAuth = Buffer.from('Proxy-Authorization: Basic ' + Buffer.from(VPN_USERNAME + ':' + VPN_PASSWORD).toString('base64'));
-
-  createPortForwarder('localhost', 8081, VPN_SERVER_URL, VPN_SERVER_PORT, basicAuth, IS_REMOTE_HTTPS, IGNORE_HTTP_CERTS);
+  createPortForwarder('*', 8081, VPN_SERVER_URL, VPN_SERVER_PORT, IS_REMOTE_HTTPS, IGNORE_HTTP_CERTS);
 }
 
 main();
