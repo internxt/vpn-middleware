@@ -5,7 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
-  async verifyProxyToken(token: string) {
+  async verifyProxyToken<T>(token: string): Promise<T> {
     const decodedToken = await this.jwtService.verify(token);
 
     return decodedToken;
