@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  drive-database:
+    image: postgres:15
+    container_name: vpn-database
+    restart: always
+    volumes:
+      - ./api/infrastructure/database-init-scripts:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+      POSTGRES_DB: vpn
+    networks:
+      - external-network
+    ports:
+      - 5432:5432
+
+networks:
+  external-network:
+    external:
+      name: internxt
