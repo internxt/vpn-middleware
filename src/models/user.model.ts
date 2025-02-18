@@ -19,7 +19,7 @@ export class UserModel extends Model {
     allowNull: false,
     primaryKey: true,
   })
-  id: string;
+  uuid: string;
 
   @ForeignKey(() => TierModel)
   @Column({

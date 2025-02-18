@@ -8,8 +8,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  await Promise.all([await app.listen(process.env.PORT ?? 3001),  await bootstrapServer()]);
+  await Promise.all([
+    await app.listen(process.env.PORT ?? 3001),
+    await bootstrapServer(),
+  ]);
 
-  logger.log(`Application listening on port: ${3001}`);
+  logger.log(`Application listening on port: ${process.env.PORT ?? 3001}`);
 }
 bootstrap();

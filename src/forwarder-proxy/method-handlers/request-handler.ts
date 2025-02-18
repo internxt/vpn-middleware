@@ -1,78 +1,92 @@
+import { Injectable, Logger } from '@nestjs/common';
 import http from 'http';
-import https from "https";
+import https from 'https';
 import { URL } from 'url';
 
-export class ProxyRequestHandler {
-    private connectionClient: typeof http | typeof https;
-    private proxyUrl: URL;
-    private proxyAuth;
-    private req: http.IncomingMessage;
-    private res: http.ServerResponse<http.IncomingMessage> & {
-        req: http.IncomingMessage;
+@Injectable()
+export class ProxyRequestService {
+  private readonly logger = new Logger(ProxyRequestService.name);
+
+  constructor() {}
+
+  handleRequest({
+    proxyUrl,
+    proxyAuth,
+    req,
+    res,
+  }: {
+    proxyUrl: string;
+    proxyAuth: { username: string; password: string };
+    req: http.IncomingMessage;
+    res: http.ServerResponse<http.IncomingMessage> & {
+      req: http.IncomingMessage;
+    };
+  }) {
+    const url = new URL(proxyUrl);
+
+    const connectionClient = url.protocol === 'https:' ? https : http;
+
+    const headers = {
+      ...this.addProxyAuthToHeaders(
+        req.headers,
+        proxyAuth.username,
+        proxyAuth.password,
+      ),
+      Host: req.url!.split(':')[0], // Extract target host
     };
 
-    constructor({ proxyUrl, proxyAuth, req, res }) {
-        const url = new URL(proxyUrl);
+    const options = {
+      method: req.method,
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: req.url,
+      headers: headers,
+      rejectUnauthorized: false,
+    };
 
-        if (!url) {
-            throw new Error('no protocol url')
-        }
+    const proxyRequest = connectionClient.request(options);
 
-        this.proxyUrl = url;
-        this.proxyAuth = proxyAuth;
-        this.req = req;
-        this.res = res;
-        this.connectionClient = this.proxyUrl.protocol === 'https:' ? https : http;
-    }
+    proxyRequest.once('response', (proxyResponse) => {
+      if (!proxyResponse.statusCode) {
+        this.logger.error('Invalid Proxy Request');
+        res.statusCode = 502;
+        res.end('Invalid Proxy Request');
+        return;
+      }
 
-    onRequest() {
-        const headers = {
-            ...this.addProxyAuthToHeaders(this.proxyAuth.username, this.proxyAuth.password),
-            'Host': this.req.url!.split(':')[0],  // Target host fix type
-        };
+      this.logger.debug(
+        `Proxying request to ${url.hostname} - Status: ${proxyResponse.statusCode}`,
+      );
+      res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+      proxyResponse.pipe(res);
+    });
 
-        const options = {
-            method: this.req.method,
-            hostname: this.proxyUrl.hostname,
-            port: this.proxyUrl.port || (this.proxyUrl.protocol === 'https:' ? 443 : 80),
-            path: this.req.url,
-            headers: headers,
-            rejectUnauthorized: false
-        };
+    proxyRequest.on('error', (err) => {
+      this.logger.error(`Proxy request error: ${err.message}`);
+      res.statusCode = 502;
+      res.end('Proxy request failed');
+    });
 
+    req.on('error', () => {
+      this.logger.error('HTTP connection aborted by client');
+      proxyRequest.destroy();
+      req.destroy();
+    });
 
-        const proxyRequest = this.connectionClient.request(options);
+    req.pipe(proxyRequest);
+  }
 
-        proxyRequest.once('response', (proxyResponse) => {
+  private addProxyAuthToHeaders(
+    headers: http.IncomingHttpHeaders,
+    username: string,
+    password: string,
+  ) {
+    delete headers['Proxy-Authorization'];
+    delete headers['proxy-authorization'];
 
-            if (!proxyResponse.statusCode) {
-                throw new Error('INVALID REQUEST')
-            }
-
-            this.res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
-            proxyResponse.pipe(this.res);
-        })
-
-        proxyRequest.on('error', (err) => {
-            console.error('Request error:', err);
-            this.res.statusCode = 502;
-            this.res.end('Proxy request failed');
-        });
-
-        this.req.on('error', () => {
-            console.error('Http connection Aborted by client');
-            proxyRequest.destroy();
-            this.req.destroy();
-        })
-
-        this.req.pipe(proxyRequest);
-
-    }
-
-    addProxyAuthToHeaders(username: string, password: string) {
-        delete this.req.headers['Proxy-Authorization']
-        delete this.req.headers['proxy-authorization']
-
-        return { ...this.req.headers, 'proxy-authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}` }
-    }
+    return {
+      ...headers,
+      'proxy-authorization': `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`,
+    };
+  }
 }
