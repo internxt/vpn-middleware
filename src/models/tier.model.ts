@@ -21,7 +21,7 @@ export class TierModel extends Model {
   zones: string[];
 
   @HasMany(() => UserModel)
-  players: UserModel[];
+  users: UserModel[];
 
   @Column({
     type: DataType.DATE,

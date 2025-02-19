@@ -23,12 +23,12 @@ export class UserModel extends Model {
 
   @ForeignKey(() => TierModel)
   @Column({
-    type: DataType.UUID,
+    type: DataType.UUIDV4,
     allowNull: false,
   })
   tierId: string;
 
-  @BelongsTo(() => TierModel)
+  @BelongsTo(() => TierModel, 'uuid')
   tier: TierModel;
 
   @Column({
