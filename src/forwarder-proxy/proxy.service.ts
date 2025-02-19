@@ -123,7 +123,7 @@ export class ForwardProxyServer {
       return null;
     }
 
-    if (!authHeader.startsWith(authPrefix)) {
+    if (!authHeader || !authHeader.startsWith(authPrefix)) {
       return null;
     }
 
