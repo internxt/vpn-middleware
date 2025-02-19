@@ -5,6 +5,7 @@ import {
   DataType,
   ForeignKey,
   BelongsTo,
+  PrimaryKey,
 } from 'sequelize-typescript';
 import { TierModel } from './tier.model';
 
@@ -28,7 +29,7 @@ export class UserModel extends Model {
   })
   tierId: string;
 
-  @BelongsTo(() => TierModel, 'uuid')
+  @BelongsTo(() => TierModel, 'tierId')
   tier: TierModel;
 
   @Column({
