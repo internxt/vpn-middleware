@@ -82,7 +82,7 @@ export class ForwardProxyServer {
   ): Promise<ProxyToken | null> {
     const authPrefix = 'Basic ';
 
-    if (!authHeader.startsWith(authPrefix)) {
+    if (!authHeader || !authHeader.startsWith(authPrefix)) {
       return null;
     }
 
