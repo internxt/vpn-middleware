@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { UserModel } from '../../models/user.model';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TierModel } from '../../models/tier.model';
+import { anonymousUserUuid } from './constants';
 
 @Injectable()
 export class UsersService {
@@ -10,6 +11,10 @@ export class UsersService {
     @InjectModel(UserModel)
     private userModel: typeof UserModel,
   ) {}
+
+  async getAnynomousUser() {
+    return this.getUser(anonymousUserUuid);
+  }
 
   async getUser(uuid: string) {
     const user = await this.userModel.findOne({

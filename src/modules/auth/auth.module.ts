@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -16,6 +16,7 @@ import { GatewayRS256JwtStrategy } from './strategies/gateway-rs256jwt.strategy'
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
         return {
+          // This will set this secret for encoding and decoding JWT tokens with jwtService
           secret: configService.get('secrets.jwt'),
           signOptions: {
             expiresIn: 3600,
@@ -23,7 +24,7 @@ import { GatewayRS256JwtStrategy } from './strategies/gateway-rs256jwt.strategy'
         };
       },
     }),
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   providers: [AuthService, JwtStrategy, GatewayRS256JwtStrategy],
   controllers: [],

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { AuthTokenPayload } from './interfaces';
 
 @Injectable()
 export class AuthService {
@@ -9,5 +10,11 @@ export class AuthService {
     const decodedToken = await this.jwtService.verify(token);
 
     return decodedToken;
+  }
+
+  async createProxyToken(payload: AuthTokenPayload): Promise<string> {
+    const encodedToken = await this.jwtService.signAsync({ payload });
+
+    return encodedToken;
   }
 }
