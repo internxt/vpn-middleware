@@ -13,7 +13,7 @@ export default () => ({
   },
   secrets: {
     jwt: process.env.JWT_SECRET,
-    gateway: process.env.GATEWAY_PUBLIC_SECRET,
+    gateway: process.env.GATEWAY_SECRET,
   },
   vpns: {
     FR: {
