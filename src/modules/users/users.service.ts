@@ -3,12 +3,14 @@ import { InjectModel } from '@nestjs/sequelize';
 import { UserModel } from '../../models/user.model';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TierModel } from '../../models/tier.model';
+import { AuthCacheService } from '../auth/auth-cache.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(UserModel)
     private userModel: typeof UserModel,
+    private readonly authCacheService: AuthCacheService,
   ) {}
 
   async getUser(uuid: string) {
@@ -51,6 +53,11 @@ export class UsersService {
     await this.userModel.update(
       { tierId: createUserDto.tierId },
       { where: { uuid: createUserDto.uuid } },
+    );
+
+    await this.authCacheService.setUser(
+      createUserDto.uuid,
+      createUserDto.tierId,
     );
 
     return user;

@@ -8,6 +8,9 @@ import {
   DecodedAuthToken,
   ProxyToken,
 } from './interfaces/decoded-token.interface';
+import { UserModel } from '../models/user.model';
+import { AuthCacheService } from '../modules/auth/auth-cache.service';
+import { UsersService } from 'src/modules/users/users.service';
 
 @Injectable()
 export class ForwardProxyServer {
@@ -21,12 +24,17 @@ export class ForwardProxyServer {
     private readonly proxyConnectService: ProxyConnectService,
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly authCacheService: AuthCacheService,
+    private readonly usersService: UsersService,
   ) {}
 
   async startProxyServer() {
     this.loadVpnConfigs();
 
     const server = http.createServer(async (req, res) => {
+      this.logger.log(`Incoming request: ${req.method} ${req.url}`);
+      this.logger.log(`Headers: ${JSON.stringify(req.headers)}`);
+
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -50,6 +58,10 @@ export class ForwardProxyServer {
 
     // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
+      this.logger.log(`Incoming CONNECT request: ${req.method} ${req.url}`);
+
+      this.logger.log(`Headers: ${JSON.stringify(req.headers)}`);
+
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -77,10 +89,39 @@ export class ForwardProxyServer {
     });
   }
 
+  private async validateToken(token: string): Promise<UserModel | null> {
+    try {
+      const decodedToken =
+        await this.authService.verifyProxyToken<DecodedAuthToken>(token);
+      const { uuid } = decodedToken;
+
+      const existsInCache = await this.authCacheService.userExists(uuid);
+      if (existsInCache) {
+        return (await this.authCacheService.getUser(
+          uuid,
+        )) as unknown as UserModel;
+      }
+
+      const user = await this.usersService.getUserByUuid(uuid);
+      if (!user) {
+        return null;
+      }
+
+      await this.authCacheService.setUser(uuid, user.tierId);
+      return user;
+    } catch (error) {
+      this.logger.error('Token validation failed:', error);
+      return null;
+    }
+  }
+
   private async decodeAuthToken(
     authHeader: string,
   ): Promise<ProxyToken | null> {
     const authPrefix = 'Basic ';
+    if (!authHeader) {
+      return null;
+    }
 
     if (!authHeader.startsWith(authPrefix)) {
       return null;
@@ -88,21 +129,19 @@ export class ForwardProxyServer {
 
     const encodedCredentials = authHeader.slice(authPrefix.length);
 
-    try {
-      const decodedCredentials = Buffer.from(
-        encodedCredentials,
-        'base64',
-      ).toString('utf-8');
+    const decodedCredentials = Buffer.from(
+      encodedCredentials,
+      'base64',
+    ).toString('utf-8');
 
-      const [region, token] = decodedCredentials.split(':');
+    const [region, token] = decodedCredentials.split(':');
 
-      const decodedToken =
-        await this.authService.verifyProxyToken<DecodedAuthToken>(token);
-
-      return { region, data: decodedToken };
-    } catch (error) {
+    const user = await this.validateToken(token);
+    if (!user) {
       return null;
     }
+
+    return { region, data: user };
   }
 
   private loadVpnConfigs() {

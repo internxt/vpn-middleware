@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -6,6 +6,8 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { GatewayRS256JwtStrategy } from './strategies/gateway-rs256jwt.strategy';
+import { AuthCacheService } from './auth-cache.service';
+import { RedisModule } from '../redis/redis.module';
 
 @Module({
   imports: [
@@ -23,10 +25,16 @@ import { GatewayRS256JwtStrategy } from './strategies/gateway-rs256jwt.strategy'
         };
       },
     }),
-    UsersModule,
+    forwardRef(() => UsersModule),
+    RedisModule,
   ],
-  providers: [AuthService, JwtStrategy, GatewayRS256JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GatewayRS256JwtStrategy,
+    AuthCacheService,
+  ],
   controllers: [],
-  exports: [PassportModule, AuthService, JwtStrategy],
+  exports: [PassportModule, AuthService, JwtStrategy, AuthCacheService],
 })
 export class AuthModule {}
