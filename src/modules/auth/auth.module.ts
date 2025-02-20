@@ -18,6 +18,7 @@ import { RedisModule } from '../redis/redis.module';
       inject: [ConfigService],
       useFactory: async (configService: ConfigService) => {
         return {
+          // This will set this secret for encoding and decoding JWT tokens with jwtService
           secret: configService.get('secrets.jwt'),
           signOptions: {
             expiresIn: 3600,

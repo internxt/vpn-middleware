@@ -1,8 +1,6 @@
+import { AuthTokenPayload } from '../../modules/auth/interfaces';
+
 export interface ProxyToken {
   region: string;
-  data: DecodedAuthToken;
-}
-
-export interface DecodedAuthToken {
-  uuid: string;
+  data: AuthTokenPayload;
 }

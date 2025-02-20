@@ -4,6 +4,8 @@ import { UserModel } from '../../models/user.model';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TierModel } from '../../models/tier.model';
 import { AuthCacheService } from '../auth/auth-cache.service';
+import { anonymousUserUuid } from './constants';
+import { UserEntity } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
@@ -13,13 +15,17 @@ export class UsersService {
     private readonly authCacheService: AuthCacheService,
   ) {}
 
+  async getAnynomousUser() {
+    return this.getUser(anonymousUserUuid);
+  }
+
   async getUser(uuid: string) {
     const user = await this.userModel.findOne({
       where: { uuid },
       include: [TierModel],
     });
 
-    return user;
+    return this.modelToEntity(user);
   }
 
   async getUserByUuid(uuid: string) {
@@ -39,27 +45,30 @@ export class UsersService {
       throw new BadRequestException('Invalid Tier ID');
     }
 
-    const user = await this.userModel.findOne({
+    const existentUser = await this.userModel.findOne({
       where: { uuid: createUserDto.uuid },
     });
 
-    if (!user) {
-      return this.userModel.create({
-        uuid: createUserDto.uuid,
-        tierId: createUserDto.tierId,
-      });
-    }
-
-    await this.userModel.update(
-      { tierId: createUserDto.tierId },
-      { where: { uuid: createUserDto.uuid } },
-    );
+    const updatedUser = existentUser
+      ? await existentUser.update({ tierId: createUserDto.tierId })
+      : await this.userModel.create({
+          uuid: createUserDto.uuid,
+          tierId: createUserDto.tierId,
+        });
 
     await this.authCacheService.setUser(
       createUserDto.uuid,
       createUserDto.tierId,
     );
 
-    return user;
+    return this.modelToEntity(updatedUser);
+  }
+
+  private modelToEntity(model: UserModel) {
+    const user = model?.toJSON() || {};
+
+    return new UserEntity({
+      ...user,
+    });
   }
 }

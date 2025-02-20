@@ -10,7 +10,7 @@ module.exports = {
         type: Sequelize.UUID
       },
       tier_id: {
-        type: Sequelize.STRING
+        type: Sequelize.UUID
       },
       created_at: {
         type: Sequelize.DataTypes.DATE,
