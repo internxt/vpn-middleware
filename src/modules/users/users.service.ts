@@ -56,10 +56,7 @@ export class UsersService {
           tierId: createUserDto.tierId,
         });
 
-    await this.authCacheService.setUser(
-      createUserDto.uuid,
-      createUserDto.tierId,
-    );
+    await this.authCacheService.setUser(updatedUser);
 
     return this.modelToEntity(updatedUser);
   }

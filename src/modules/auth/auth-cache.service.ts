@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
+import { UserEntity } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthCacheService {
@@ -9,9 +10,9 @@ export class AuthCacheService {
 
   constructor(@InjectRedis() private readonly redis: Redis) {}
 
-  async setUser(uuid: string, tierId: string): Promise<void> {
-    const key = `${this.USER_PREFIX}${uuid}`;
-    await this.redis.set(key, tierId, 'EX', this.CACHE_TTL);
+  async setUser(user: UserEntity): Promise<void> {
+    const key = `${this.USER_PREFIX}${user.uuid}`;
+    await this.redis.set(key, JSON.stringify(user), 'EX', this.CACHE_TTL);
   }
 
   async userExists(uuid: string): Promise<boolean> {
@@ -20,8 +21,15 @@ export class AuthCacheService {
     return exists === 1;
   }
 
-  async getUser(uuid: string): Promise<string | null> {
+  async getUser(uuid: string): Promise<UserEntity | null> {
     const key = `${this.USER_PREFIX}${uuid}`;
-    return await this.redis.get(key);
+    const userData = await this.redis.get(key);
+
+    if (!userData) {
+      return null;
+    }
+
+    const parsedUser = JSON.parse(userData);
+    return new UserEntity(parsedUser);
   }
 }
