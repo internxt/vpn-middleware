@@ -4,10 +4,8 @@ import { ProxyConnectService } from './method-handlers/connect-handler';
 import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
-import {
-  DecodedAuthToken,
-  ProxyToken,
-} from './interfaces/decoded-token.interface';
+import { ProxyToken } from './interfaces/decoded-token.interface';
+import { AuthTokenPayload } from '../modules/auth/interfaces';
 
 @Injectable()
 export class ForwardProxyServer {
@@ -97,7 +95,7 @@ export class ForwardProxyServer {
       const [region, token] = decodedCredentials.split(':');
 
       const decodedToken =
-        await this.authService.verifyProxyToken<DecodedAuthToken>(token);
+        await this.authService.verifyProxyToken<AuthTokenPayload>(token);
 
       return { region, data: decodedToken };
     } catch (error) {
