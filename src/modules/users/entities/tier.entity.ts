@@ -10,6 +10,9 @@ export class TierEntity {
   @ApiProperty()
   zones: string[];
 
+  @Expose()
+  name: string[];
+
   @Exclude()
   createdAt: Date;
 

@@ -20,6 +20,11 @@ export class TierModel extends Model {
   })
   zones: string[];
 
+  @Column({
+    type: DataType.STRING,
+  })
+  name: string;
+
   @HasMany(() => UserModel)
   users: UserModel[];
 
