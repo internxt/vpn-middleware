@@ -1,13 +1,11 @@
 import { SequelizeModuleAsyncOptions } from '@nestjs/sequelize';
-import { TierModel } from '../models/tier.model';
-import { UserModel } from '../models/user.model';
 import { ConfigService } from '@nestjs/config';
 
 const databaseConfiguration: SequelizeModuleAsyncOptions = {
   useFactory: async (configService: ConfigService) => ({
     dialect: 'postgres',
     synchronize: false,
-    models: [TierModel, UserModel],
+    autoLoadModels: true,
     host: configService.get('database.host'),
     port: configService.get('database.port'),
     username: configService.get('database.username'),
