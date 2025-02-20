@@ -8,7 +8,8 @@ import { ProxyToken } from './interfaces/decoded-token.interface';
 import { AuthCacheService } from '../modules/auth/auth-cache.service';
 import { UsersService } from 'src/modules/users/users.service';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
-import { AuthTokenPayload } from 'src/modules/auth/interfaces';
+import { AuthTokenPayload } from '../modules/auth/interfaces';
+
 @Injectable()
 export class ForwardProxyServer {
   private readonly logger = new Logger(ForwardProxyServer.name);

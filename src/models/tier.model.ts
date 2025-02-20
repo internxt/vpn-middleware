@@ -1,5 +1,6 @@
 import { Table, Model, Column, DataType, HasMany } from 'sequelize-typescript';
-import { UserModel } from './user.model';
+import { UserTierModel } from './user-tier.model';
+import { LimitType } from 'src/enums/limits.enum';
 
 @Table({
   timestamps: true,
@@ -20,8 +21,15 @@ export class TierModel extends Model {
   })
   zones: string[];
 
-  @HasMany(() => UserModel)
-  users: UserModel[];
+  @Column({
+    type: DataType.STRING,
+    allowNull: false,
+    defaultValue: LimitType.INDIVIDUAL,
+  })
+  type: LimitType;
+
+  @HasMany(() => UserTierModel)
+  userTiers: UserTierModel[];
 
   @Column({
     type: DataType.DATE,
