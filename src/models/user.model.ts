@@ -1,13 +1,5 @@
-import {
-  Table,
-  Model,
-  Column,
-  DataType,
-  ForeignKey,
-  BelongsTo,
-  PrimaryKey,
-} from 'sequelize-typescript';
-import { TierModel } from './tier.model';
+import { Table, Model, Column, DataType, HasMany } from 'sequelize-typescript';
+import { UserTierModel } from './user-tier.model';
 
 @Table({
   timestamps: true,
@@ -22,15 +14,8 @@ export class UserModel extends Model {
   })
   uuid: string;
 
-  @ForeignKey(() => TierModel)
-  @Column({
-    type: DataType.UUIDV4,
-    allowNull: false,
-  })
-  tierId: string;
-
-  @BelongsTo(() => TierModel, 'tierId')
-  tier: TierModel;
+  @HasMany(() => UserTierModel)
+  userTiers: UserTierModel[];
 
   @Column({
     type: DataType.DATE,

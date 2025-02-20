@@ -12,13 +12,9 @@ export class UserEntity {
   uuid: string;
 
   @Expose()
-  @ApiProperty()
-  tierId: string;
-
-  @Expose()
   @Type(() => TierEntity)
-  @ApiProperty({ type: TierEntity, required: false })
-  tier?: TierEntity;
+  @ApiProperty({ type: [TierEntity], required: false })
+  tiers?: TierEntity[];
 
   @Expose()
   @ApiProperty()
