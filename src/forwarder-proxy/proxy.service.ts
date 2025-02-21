@@ -86,7 +86,7 @@ export class ForwardProxyServer {
     this.logger.log('Validating token');
     try {
       const decodedToken =
-        await this.authService.verifyProxyToken<AuthTokenPayload>(token);
+        await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
       let mainUser: UserEntity | null = null;
@@ -150,7 +150,7 @@ export class ForwardProxyServer {
   private async decodeAuthToken(
     authHeader: string,
   ): Promise<ProxyToken | null> {
-    this.logger.log('Decoding auth token', authHeader);
+    this.logger.debug('Decoding auth token', authHeader);
     const authPrefix = 'Basic ';
     if (!authHeader || !authHeader.startsWith(authPrefix)) {
       this.logger.error('Invalid auth header');
