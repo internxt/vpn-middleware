@@ -27,6 +27,9 @@ export class UsersRepository {
   async getUserBy(where: Partial<UserEntity>): Promise<UserEntity | null> {
     const user = await this.userModel.findOne({
       where,
+      include: [
+        { model: TierModel, as: 'tiers', attributes: ['id', 'type', 'zones'] },
+      ],
     });
     return user ? this.userModelToEntity(user) : null;
   }

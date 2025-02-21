@@ -7,7 +7,7 @@ import {
   BelongsToMany,
 } from 'sequelize-typescript';
 import { UserTierModel } from './user-tier.model';
-import { LimitType } from 'src/enums/limits.enum';
+import { TierType } from 'src/enums/tiers.enum';
 import { UserModel } from './user.model';
 
 @Table({
@@ -32,9 +32,9 @@ export class TierModel extends Model {
   @Column({
     type: DataType.STRING,
     allowNull: false,
-    defaultValue: LimitType.INDIVIDUAL,
+    defaultValue: TierType.INDIVIDUAL,
   })
-  type: LimitType;
+  type: TierType;
 
   @HasMany(() => UserTierModel)
   userTiers: UserTierModel[];

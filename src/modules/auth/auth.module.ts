@@ -6,7 +6,6 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { GatewayRS256JwtStrategy } from './strategies/gateway-rs256jwt.strategy';
-import { AuthCacheService } from './auth-cache.service';
 import { RedisModule } from '../redis/redis.module';
 
 @Module({
@@ -29,13 +28,8 @@ import { RedisModule } from '../redis/redis.module';
     forwardRef(() => UsersModule),
     RedisModule,
   ],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    GatewayRS256JwtStrategy,
-    AuthCacheService,
-  ],
+  providers: [AuthService, JwtStrategy, GatewayRS256JwtStrategy],
   controllers: [],
-  exports: [PassportModule, AuthService, JwtStrategy, AuthCacheService],
+  exports: [PassportModule, AuthService, JwtStrategy],
 })
 export class AuthModule {}

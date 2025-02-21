@@ -5,11 +5,11 @@ import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { ProxyToken } from './interfaces/decoded-token.interface';
-import { AuthCacheService } from '../modules/auth/auth-cache.service';
+import { UserCacheService } from '../modules/users/userCache.service';
 import { UsersService } from 'src/modules/users/users.service';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
 import { AuthTokenPayload } from '../modules/auth/interfaces';
-
+import { TierType } from 'src/enums/tiers.enum';
 @Injectable()
 export class ForwardProxyServer {
   private readonly logger = new Logger(ForwardProxyServer.name);
@@ -22,7 +22,7 @@ export class ForwardProxyServer {
     private readonly proxyConnectService: ProxyConnectService,
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-    private readonly authCacheService: AuthCacheService,
+    private readonly authCacheService: UserCacheService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -30,6 +30,7 @@ export class ForwardProxyServer {
     this.loadVpnConfigs();
 
     const server = http.createServer(async (req, res) => {
+      this.logger.log('Received request', req.headers['proxy-authorization']);
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -53,6 +54,7 @@ export class ForwardProxyServer {
 
     // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
+      this.logger.log('Received connect', req.headers['proxy-authorization']);
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -81,6 +83,7 @@ export class ForwardProxyServer {
   }
 
   private async validateToken(token: string): Promise<UserEntity | null> {
+    this.logger.log('Validating token');
     try {
       const decodedToken =
         await this.authService.verifyProxyToken<AuthTokenPayload>(token);
@@ -88,11 +91,15 @@ export class ForwardProxyServer {
 
       const existsInCache = await this.authCacheService.userExists(uuid);
       if (existsInCache) {
-        return await this.authCacheService.getUser(uuid);
+        return await this.authCacheService.getUserTiers(
+          uuid,
+          TierType.INDIVIDUAL,
+        );
       }
 
       const user = await this.usersService.getUserByUuid(uuid);
       if (!user) {
+        this.logger.error('User not found');
         return null;
       }
 
@@ -107,8 +114,10 @@ export class ForwardProxyServer {
   private async decodeAuthToken(
     authHeader: string,
   ): Promise<ProxyToken | null> {
+    this.logger.log('Decoding auth token', authHeader);
     const authPrefix = 'Basic ';
     if (!authHeader || !authHeader.startsWith(authPrefix)) {
+      this.logger.error('Invalid auth header');
       return null;
     }
 
