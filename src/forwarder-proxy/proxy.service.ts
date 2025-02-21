@@ -112,7 +112,7 @@ export class ForwardProxyServer {
           if (ownerExistsInCache) {
             return this.authCacheService.getUserTiers(
               ownerUuid,
-              TierType.INDIVIDUAL,
+              TierType.BUSINESS,
             );
           }
           const owner = await this.usersService.getUserByUuid(ownerUuid);
