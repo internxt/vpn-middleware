@@ -87,24 +87,60 @@ export class ForwardProxyServer {
     try {
       const decodedToken =
         await this.authService.verifyProxyToken<AuthTokenPayload>(token);
-      const { uuid } = decodedToken;
+      const { uuid, workspaces } = decodedToken;
 
+      let mainUser: UserEntity | null = null;
       const existsInCache = await this.authCacheService.userExists(uuid);
       if (existsInCache) {
-        return await this.authCacheService.getUserTiers(
+        mainUser = await this.authCacheService.getUserTiers(
           uuid,
           TierType.INDIVIDUAL,
         );
+      } else {
+        mainUser = await this.usersService.getUserByUuid(uuid);
+        if (!mainUser) {
+          this.logger.error('Main user not found');
+          return null;
+        }
+        await this.authCacheService.setUser(mainUser);
       }
 
-      const user = await this.usersService.getUserByUuid(uuid);
-      if (!user) {
-        this.logger.error('User not found');
-        return null;
+      if (workspaces?.owners?.length) {
+        const ownerPromises = workspaces.owners.map(async (ownerUuid) => {
+          const ownerExistsInCache =
+            await this.authCacheService.userExists(ownerUuid);
+          if (ownerExistsInCache) {
+            return this.authCacheService.getUserTiers(
+              ownerUuid,
+              TierType.INDIVIDUAL,
+            );
+          }
+          const owner = await this.usersService.getUserByUuid(ownerUuid);
+          if (owner) {
+            await this.authCacheService.setUser(owner);
+            return owner;
+          }
+          return null;
+        });
+
+        const owners = await Promise.all(ownerPromises);
+        const validOwners = owners.filter(
+          (owner): owner is UserEntity => owner !== null,
+        );
+
+        // Merge tiers
+        if (validOwners.length > 0) {
+          const allTiers = [...(mainUser.tiers || [])];
+          validOwners.forEach((owner) => {
+            if (owner.tiers) {
+              allTiers.push(...owner.tiers);
+            }
+          });
+          mainUser.tiers = allTiers;
+        }
       }
 
-      await this.authCacheService.setUser(user);
-      return user;
+      return mainUser;
     } catch (error) {
       this.logger.error('Token validation failed:', error);
       return null;
