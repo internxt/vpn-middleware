@@ -85,8 +85,7 @@ export class ForwardProxyServer {
   private async validateToken(token: string): Promise<UserEntity | null> {
     this.logger.log('Validating token');
     try {
-      const decodedToken =
-        await this.authService.verifyProxyToken(token);
+      const decodedToken = await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
       let mainUser: UserEntity | null = null;
@@ -97,7 +96,7 @@ export class ForwardProxyServer {
           TierType.INDIVIDUAL,
         );
       } else {
-        mainUser = await this.usersService.getUserByUuid(uuid);
+        mainUser = await this.usersService.getOrCreateFreeUser(uuid);
         if (!mainUser) {
           this.logger.error('Main user not found');
           return null;
@@ -115,7 +114,7 @@ export class ForwardProxyServer {
               TierType.BUSINESS,
             );
           }
-          const owner = await this.usersService.getUserByUuid(ownerUuid);
+          const owner = await this.usersService.getOrCreateFreeUser(ownerUuid);
           if (owner) {
             await this.authCacheService.setUser(owner);
             return owner;
