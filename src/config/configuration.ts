@@ -3,6 +3,7 @@ export default () => ({
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
   port: parseInt(process.env.PORT) || 3000,
+  proxyPort: parseInt(process.env.PROXY_PORT) || 8082,
   database: {
     host: process.env.DB_HOSTNAME,
     port: parseInt(process.env.DB_PORT) || 3306,
