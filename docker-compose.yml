@@ -45,6 +45,7 @@ services:
       - /usr/app/node_modules
     ports:
       - 3005:3005
+      - 8081:8081
     networks:
       - vpn-network
     environment: 
