@@ -1,4 +1,4 @@
-import { Expose, Transform, Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { TierEntity } from './tier.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -11,10 +11,15 @@ export class UserEntity {
   @ApiProperty()
   uuid: string;
 
-  @Expose()
   @Type(() => TierEntity)
-  @ApiProperty({ type: [TierEntity], required: false })
   tiers?: TierEntity[];
+
+  @Expose()
+  @ApiProperty({
+    type: [String],
+    description: 'All the zones user has access to',
+  })
+  zones: string[];
 
   @Expose()
   @ApiProperty()

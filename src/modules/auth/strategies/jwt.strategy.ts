@@ -9,6 +9,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserModel } from '../../../models/user.model';
 import { UsersService } from '../../users/users.service';
+import { UserEntity } from '../../users/entities/user.entity';
 
 export interface JwtPayload {
   email: string;
@@ -30,7 +31,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, strategyId) {
     });
   }
 
-  async validate(payload): Promise<UserModel> {
+  async validate(payload): Promise<UserEntity> {
     try {
       const { uuid } = payload.payload;
       const user = await this.usersService.getUserByUuid(uuid);

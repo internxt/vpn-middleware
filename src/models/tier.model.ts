@@ -1,6 +1,14 @@
-import { Table, Model, Column, DataType, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Model,
+  Column,
+  DataType,
+  HasMany,
+  BelongsToMany,
+} from 'sequelize-typescript';
 import { UserTierModel } from './user-tier.model';
 import { LimitType } from 'src/enums/limits.enum';
+import { UserModel } from './user.model';
 
 @Table({
   timestamps: true,
@@ -30,6 +38,9 @@ export class TierModel extends Model {
 
   @HasMany(() => UserTierModel)
   userTiers: UserTierModel[];
+
+  @BelongsToMany(() => UserModel, () => UserTierModel, 'userUuid', 'tierId')
+  users: UserModel[];
 
   @Column({
     type: DataType.DATE,
