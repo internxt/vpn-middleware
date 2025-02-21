@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { TierModel } from '../../models/tier.model';
 import { anonymousUserUuid, freeTierId } from './constants';
 import { UsersRepository } from './users.repository';
+import { UserCacheService } from './userCache.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private usersRepository: UsersRepository) {}
+  constructor(
+    private readonly usersRepository: UsersRepository,
+    private readonly authCacheService: UserCacheService,
+  ) {}
 
   async getAnynomousUser() {
     return this.getUserByUuid(anonymousUserUuid);

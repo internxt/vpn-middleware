@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import databaseConfiguration from '../config/connection';
 import { UsersModule } from '../modules/users/users.module';
@@ -21,7 +21,7 @@ import configuration from '../config/configuration';
       inject: [ConfigService],
       ...databaseConfiguration,
     }),
-    UsersModule,
+    forwardRef(() => UsersModule),
     AuthModule,
   ],
   providers: [ForwardProxyServer, ProxyRequestService, ProxyConnectService],

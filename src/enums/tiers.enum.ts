@@ -1,4 +1,4 @@
-export enum LimitType {
+export enum TierType {
   INDIVIDUAL = 'individual',
   BUSINESS = 'business',
 }
