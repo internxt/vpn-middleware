@@ -6,6 +6,7 @@ import databaseConfiguration from './config/connection';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import configuration from './config/configuration';
+import { GatewayModule } from './modules/gateway/gateway.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import configuration from './config/configuration';
       ...databaseConfiguration,
     }),
     UsersModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

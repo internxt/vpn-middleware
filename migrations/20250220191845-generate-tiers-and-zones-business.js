@@ -4,7 +4,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     const tiers = [
       {
-        id: 'a1b2c3d4-e5f6-4789-90ab-cdef12345678',
+        id: 'c9534015-dfa0-41df-8c0c-e93812fa2c1f',
         name: 'Tier 1 - B2C',
         zones: JSON.stringify(['FR']),
         type: 'individual',
@@ -12,7 +12,7 @@ module.exports = {
         updated_at: new Date(),
       },
       {
-        id: 'b2c3d4e5-f678-4890-abcd-ef1234567890',
+        id: '6d06f11b-9854-49db-a38b-56ca4aab1658',
         name: 'Tier 2 - B2C',
         zones: JSON.stringify(['FR', 'DE', 'PL']),
         type: 'individual',
@@ -20,7 +20,7 @@ module.exports = {
         updated_at: new Date(),
       },
       {
-        id: 'c3d4e5f6-7890-4abc-def1-234567890123',
+        id: 'cd4f81a4-6c51-4991-b24f-7219dfbbadfd',
         name: 'Tier 2 - B2B',
         zones: JSON.stringify(['FR', 'DE', 'PL']),
         type: 'business',
@@ -28,7 +28,7 @@ module.exports = {
         updated_at: new Date(),
       },
       {
-        id: 'd4e5f678-90ab-4cde-f123-456789012345',
+        id: '8efbba36-f3a1-4cf2-8f70-29326fab54f4',
         name: 'Tier 3 - B2C',
         zones: JSON.stringify(['FR', 'DE', 'PL', 'CA', 'UK']),
         type: 'individual',
@@ -36,7 +36,7 @@ module.exports = {
         updated_at: new Date(),
       },
       {
-        id: 'e5f67890-abcd-4ef1-2345-678901234567',
+        id: '1b3d5f0a-459b-4189-84b9-29933fba1aa0',
         name: 'Tier 3 - B2B',
         zones: JSON.stringify(['FR', 'DE', 'PL', 'CA', 'UK']),
         type: 'business',
@@ -51,11 +51,11 @@ module.exports = {
   async down(queryInterface, Sequelize) {
     await queryInterface.bulkDelete('tiers', {
       id: [
-        'a1b2c3d4-e5f6-4789-90ab-cdef12345678',
-        'b2c3d4e5-f678-4890-abcd-ef1234567890',
-        'c3d4e5f6-7890-4abc-def1-234567890123',
-        'd4e5f678-90ab-4cde-f123-456789012345',
-        'e5f67890-abcd-4ef1-2345-678901234567',
+        'c9534015-dfa0-41df-8c0c-e93812fa2c1f',
+        '6d06f11b-9854-49db-a38b-56ca4aab1658',
+        'cd4f81a4-6c51-4991-b24f-7219dfbbadfd',
+        '8efbba36-f3a1-4cf2-8f70-29326fab54f4',
+        '1b3d5f0a-459b-4189-84b9-29933fba1aa0',
       ],
     });
   },

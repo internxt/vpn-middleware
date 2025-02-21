@@ -1,5 +1,13 @@
-import { Table, Model, Column, DataType, HasMany } from 'sequelize-typescript';
+import {
+  Table,
+  Model,
+  Column,
+  DataType,
+  HasMany,
+  BelongsToMany,
+} from 'sequelize-typescript';
 import { UserTierModel } from './user-tier.model';
+import { TierModel } from './tier.model';
 
 @Table({
   timestamps: true,
@@ -16,6 +24,9 @@ export class UserModel extends Model {
 
   @HasMany(() => UserTierModel)
   userTiers: UserTierModel[];
+
+  @BelongsToMany(() => TierModel, () => UserTierModel, 'userUuid', 'tierId')
+  tiers: TierModel[];
 
   @Column({
     type: DataType.DATE,

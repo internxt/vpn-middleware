@@ -8,6 +8,9 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.UUID
       },
+      name: {
+        type: Sequelize.STRING,
+      },
       zones: {
         type: Sequelize.JSONB
       },
