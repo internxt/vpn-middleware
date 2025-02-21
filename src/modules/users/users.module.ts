@@ -7,6 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { UserTierModel } from '../../models/user-tier.model';
 import { TierModel } from '../../models/tier.model';
+import { UsersRepository } from './users.repository';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { TierModel } from '../../models/tier.model';
       useClass: ClassSerializerInterceptor,
     },
     UsersService,
+    UsersRepository,
   ],
   exports: [UsersService, SequelizeModule],
 })

@@ -1,67 +1,83 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/sequelize';
-import { UserModel } from '../../models/user.model';
 import { CreateUserDto } from './dto/create-user.dto';
 import { TierModel } from '../../models/tier.model';
-import { anonymousUserUuid } from './constants';
-import { UserEntity } from './entities/user.entity';
+import { anonymousUserUuid, freeTierId } from './constants';
+import { UsersRepository } from './users.repository';
 
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(UserModel)
-    private userModel: typeof UserModel,
-  ) {}
+  constructor(private usersRepository: UsersRepository) {}
 
   async getAnynomousUser() {
-    return this.getUser(anonymousUserUuid);
-  }
-
-  async getUser(uuid: string) {
-    const user = await this.userModel.findOne({
-      where: { uuid },
-      include: [TierModel],
-    });
-
-    return this.modelToEntity(user);
+    return this.getUserByUuid(anonymousUserUuid);
   }
 
   async getUserByUuid(uuid: string) {
-    const user = await this.userModel.findOne({
-      where: { uuid },
-    });
+    return this.usersRepository.getUserBy({ uuid });
+  }
 
-    return user;
+  async deleteUserByTier(userUuid: string, tierId: string): Promise<number> {
+    const deletedRows = await this.usersRepository.deleteUserTier(
+      userUuid,
+      tierId,
+    );
+    return deletedRows;
+  }
+
+  async getFreeTier() {
+    return await this.usersRepository.findTierById(freeTierId);
+  }
+
+  async getUserAndTiers(uuid: string) {
+    const user = await this.usersRepository.getUserAndTiersByUuid(uuid);
+
+    const allZones = [...new Set(user.tiers.flatMap((tier) => tier.zones))];
+
+    if (allZones.length === 0) {
+      const freeTier = await this.getFreeTier();
+      allZones.push(...freeTier.zones);
+    }
+
+    return { ...user, zones: allZones };
   }
 
   async createOrUpdateUser(createUserDto: CreateUserDto) {
-    const tier = await TierModel.findOne({
-      where: { id: createUserDto.tierId },
-    });
+    const tier = await this.usersRepository.findTierById(createUserDto.tierId);
 
     if (!tier) {
       throw new BadRequestException('Invalid Tier ID');
     }
 
-    const existentUser = await this.userModel.findOne({
-      where: { uuid: createUserDto.uuid },
+    let user = await this.usersRepository.getUserBy({
+      uuid: createUserDto.uuid,
     });
 
-    const updatedUser = existentUser
-      ? await existentUser.update({ tierId: createUserDto.tierId })
-      : await this.userModel.create({
-          uuid: createUserDto.uuid,
-          tierId: createUserDto.tierId,
-        });
+    if (!user) {
+      user = await this.usersRepository.createUser({
+        uuid: createUserDto.uuid,
+      });
+    }
 
-    return this.modelToEntity(updatedUser);
-  }
+    const userCurrentTiers = await this.usersRepository.findUserTiers(
+      createUserDto.uuid,
+    );
 
-  private modelToEntity(model: UserModel) {
-    const user = model?.toJSON() || {};
+    const sameTypeTier = userCurrentTiers.find(
+      (userTier) => userTier.type === tier.type,
+    );
 
-    return new UserEntity({
-      ...user,
-    });
+    if (sameTypeTier) {
+      await this.usersRepository.deleteUserTier(
+        createUserDto.uuid,
+        sameTypeTier.id,
+      );
+    }
+
+    await this.usersRepository.createUserTier(
+      createUserDto.uuid,
+      createUserDto.tierId,
+    );
+
+    return user;
   }
 }

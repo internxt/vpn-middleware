@@ -1,17 +1,8 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  SerializeOptions,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, SerializeOptions, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { User } from '../auth/decorators/user.decorator';
-import { GatewayGuard } from '../auth/gateway.guard';
-import { CreateUserDto } from './dto/create-user.dto';
 import { AuthService } from '../auth/auth.service';
 import { UserModel } from '../../models/user.model';
 import { UserEntity } from './entities/user.entity';
@@ -24,27 +15,15 @@ export class UsersController {
     private readonly authService: AuthService,
   ) {}
 
-  @Post('/')
-  @UseGuards(GatewayGuard)
-  @SerializeOptions({ type: UserEntity })
-  @ApiOperation({
-    summary: 'Create or update user',
-  })
-  @ApiResponse({ type: UserEntity })
-  async createOrUpdate(@Body() createUserBody: CreateUserDto) {
-    const userData = await this.usersService.createOrUpdateUser(createUserBody);
-    return userData;
-  }
-
   @Get('/')
   @UseGuards(AuthGuard)
-  @SerializeOptions({ type: UserEntity })
+  @SerializeOptions({ type: UserEntity, excludeExtraneousValues: true })
   @ApiOperation({
     summary: 'Get user data and tier',
   })
   @ApiResponse({ type: UserEntity })
   async getUserData(@User() user: UserModel): Promise<UserEntity> {
-    const userData = await this.usersService.getUser(user.uuid);
+    const userData = await this.usersService.getUserAndTiers(user.uuid);
     return userData;
   }
 
