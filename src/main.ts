@@ -1,3 +1,7 @@
+import dotenv from 'dotenv';
+
+dotenv.config({ path: `.env` });
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';

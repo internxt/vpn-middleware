@@ -5,8 +5,11 @@ import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { ProxyToken } from './interfaces/decoded-token.interface';
+import { UserCacheService } from '../modules/users/userCache.service';
+import { UsersService } from 'src/modules/users/users.service';
+import { UserEntity } from 'src/modules/users/entities/user.entity';
 import { AuthTokenPayload } from '../modules/auth/interfaces';
-
+import { TierType } from 'src/enums/tiers.enum';
 @Injectable()
 export class ForwardProxyServer {
   private readonly logger = new Logger(ForwardProxyServer.name);
@@ -19,12 +22,15 @@ export class ForwardProxyServer {
     private readonly proxyConnectService: ProxyConnectService,
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly authCacheService: UserCacheService,
+    private readonly usersService: UsersService,
   ) {}
 
   async startProxyServer() {
     this.loadVpnConfigs();
 
     const server = http.createServer(async (req, res) => {
+      this.logger.log('Received request', req.headers['proxy-authorization']);
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -48,6 +54,7 @@ export class ForwardProxyServer {
 
     // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
+      this.logger.log('Received connect', req.headers['proxy-authorization']);
       const decodedToken = await this.decodeAuthToken(
         req.headers['proxy-authorization'],
       );
@@ -75,32 +82,96 @@ export class ForwardProxyServer {
     });
   }
 
+  private async validateToken(token: string): Promise<UserEntity | null> {
+    this.logger.log('Validating token');
+    try {
+      const decodedToken =
+        await this.authService.verifyProxyToken(token);
+      const { uuid, workspaces } = decodedToken;
+
+      let mainUser: UserEntity | null = null;
+      const existsInCache = await this.authCacheService.userExists(uuid);
+      if (existsInCache) {
+        mainUser = await this.authCacheService.getUserTiers(
+          uuid,
+          TierType.INDIVIDUAL,
+        );
+      } else {
+        mainUser = await this.usersService.getUserByUuid(uuid);
+        if (!mainUser) {
+          this.logger.error('Main user not found');
+          return null;
+        }
+        await this.authCacheService.setUser(mainUser);
+      }
+
+      if (workspaces?.owners?.length) {
+        const ownerPromises = workspaces.owners.map(async (ownerUuid) => {
+          const ownerExistsInCache =
+            await this.authCacheService.userExists(ownerUuid);
+          if (ownerExistsInCache) {
+            return this.authCacheService.getUserTiers(
+              ownerUuid,
+              TierType.BUSINESS,
+            );
+          }
+          const owner = await this.usersService.getUserByUuid(ownerUuid);
+          if (owner) {
+            await this.authCacheService.setUser(owner);
+            return owner;
+          }
+          return null;
+        });
+
+        const owners = await Promise.all(ownerPromises);
+        const validOwners = owners.filter(
+          (owner): owner is UserEntity => owner !== null,
+        );
+
+        // Merge tiers
+        if (validOwners.length > 0) {
+          const allTiers = [...(mainUser.tiers || [])];
+          validOwners.forEach((owner) => {
+            if (owner.tiers) {
+              allTiers.push(...owner.tiers);
+            }
+          });
+          mainUser.tiers = allTiers;
+        }
+      }
+
+      return mainUser;
+    } catch (error) {
+      this.logger.error('Token validation failed:', error);
+      return null;
+    }
+  }
+
   private async decodeAuthToken(
     authHeader: string,
   ): Promise<ProxyToken | null> {
+    this.logger.debug('Decoding auth token', authHeader);
     const authPrefix = 'Basic ';
-
     if (!authHeader || !authHeader.startsWith(authPrefix)) {
+      this.logger.error('Invalid auth header');
       return null;
     }
 
     const encodedCredentials = authHeader.slice(authPrefix.length);
 
-    try {
-      const decodedCredentials = Buffer.from(
-        encodedCredentials,
-        'base64',
-      ).toString('utf-8');
+    const decodedCredentials = Buffer.from(
+      encodedCredentials,
+      'base64',
+    ).toString('utf-8');
 
-      const [region, token] = decodedCredentials.split(':');
+    const [region, token] = decodedCredentials.split(':');
 
-      const decodedToken =
-        await this.authService.verifyProxyToken<AuthTokenPayload>(token);
-
-      return { region, data: decodedToken };
-    } catch (error) {
+    const user = await this.validateToken(token);
+    if (!user) {
       return null;
     }
+
+    return { region, data: user };
   }
 
   private loadVpnConfigs() {

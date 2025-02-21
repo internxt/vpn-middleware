@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SequelizeModule } from '@nestjs/sequelize';
+import { RedisModule } from '@nestjs-modules/ioredis';
 import databaseConfiguration from './config/connection';
 import { UsersModule } from './modules/users/users.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -20,6 +21,7 @@ import { GatewayModule } from './modules/gateway/gateway.module';
       inject: [ConfigService],
       ...databaseConfiguration,
     }),
+    RedisModule,
     UsersModule,
     GatewayModule,
   ],

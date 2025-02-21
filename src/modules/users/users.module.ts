@@ -8,11 +8,14 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { UserTierModel } from '../../models/user-tier.model';
 import { TierModel } from '../../models/tier.model';
 import { UsersRepository } from './users.repository';
+import { RedisModule } from '../redis/redis.module';
+import { UserCacheService } from './userCache.service';
 
 @Module({
   imports: [
     SequelizeModule.forFeature([TierModel, UserTierModel, UserModel]),
     forwardRef(() => AuthModule),
+    RedisModule,
   ],
   controllers: [UsersController],
   providers: [
@@ -22,7 +25,8 @@ import { UsersRepository } from './users.repository';
     },
     UsersService,
     UsersRepository,
+    UserCacheService,
   ],
-  exports: [UsersService, SequelizeModule],
+  exports: [UsersService, SequelizeModule, UserCacheService],
 })
 export class UsersModule {}
