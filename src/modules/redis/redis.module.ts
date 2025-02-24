@@ -10,7 +10,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         type: 'single',
-        url: `redis://:${configService.get('redis.password')}@${configService.get('redis.host')}:${configService.get('redis.port')}`,
+        url: configService.get('redis.connectionString'),
       }),
       inject: [ConfigService],
     }),

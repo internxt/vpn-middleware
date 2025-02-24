@@ -13,9 +13,7 @@ export default () => ({
     database: process.env.DB_NAME,
   },
   redis: {
-    host: process.env.REDIS_HOST,
-    port: parseInt(process.env.REDIS_PORT) || 6379,
-    password: process.env.REDIS_PASSWORD,
+    connectionString: process.env.REDIS_CONNECTION_STRING,
   },
   secrets: {
     jwt: process.env.JWT_SECRET,
