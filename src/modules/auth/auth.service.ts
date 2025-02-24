@@ -7,11 +7,10 @@ export class AuthService {
   constructor(private readonly jwtService: JwtService) {}
 
   async verifyProxyToken(token: string): Promise<AuthTokenPayload> {
-    const decodedToken = await this.jwtService.verify<{
-      payload: AuthTokenPayload;
-    }>(token);
+    const decodedToken =
+      await this.jwtService.verifyAsync<AuthTokenPayload>(token);
 
-    return decodedToken?.payload;
+    return decodedToken;
   }
 
   async createProxyToken(payload: AuthTokenPayload): Promise<string> {
