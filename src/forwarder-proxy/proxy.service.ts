@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { ProxyToken } from './interfaces/decoded-token.interface';
 import { UsersService } from 'src/modules/users/users.service';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
+import { ZoneNotPermittedError } from './errors/zone-not-permitted.error';
 
 @Injectable()
 export class ForwardProxyServer {
@@ -27,51 +28,72 @@ export class ForwardProxyServer {
     this.loadVpnConfigs();
 
     const server = http.createServer(async (req, res) => {
-      this.logger.log('Received request', req.headers['proxy-authorization']);
-      const decodedToken = await this.decodeAuthToken(
-        req.headers['proxy-authorization'],
-      );
+      try {
+        const decodedToken = await this.decodeAuthToken(
+          req.headers['proxy-authorization'],
+        );
 
-      if (!decodedToken) {
-        res.writeHead(407, { 'Proxy-Authenticate': 'Basic realm="Proxy"' });
-        res.end('407 Invalid token, proxy authentication required');
-        return;
+        if (!decodedToken) {
+          res.writeHead(407, { 'Proxy-Authenticate': 'Basic realm="Proxy"' });
+          res.end('407 Invalid token, proxy authentication required');
+          return;
+        }
+
+        const credentials = this.getVpnCredentials(decodedToken.region);
+
+        // This handles any HTTP request
+        this.proxyRequestService.handleRequest({
+          proxyUrl: credentials.address,
+          proxyAuth: credentials.auth,
+          req,
+          res,
+        });
+      } catch (error) {
+        if (error instanceof ZoneNotPermittedError) {
+          res.writeHead(403, { 'Content-Type': 'text/plain' });
+          res.end('403 Forbidden - Zone access not permitted');
+          return;
+        }
+        res.writeHead(500);
+        res.end('Internal Server Error');
       }
-
-      const credentials = this.getVpnCredentials(decodedToken.region);
-
-      // This handles any HTTP request
-      this.proxyRequestService.handleRequest({
-        proxyUrl: credentials.address,
-        proxyAuth: credentials.auth,
-        req,
-        res,
-      });
     });
 
     // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
-      this.logger.log('Received connect', req.headers['proxy-authorization']);
-      const decodedToken = await this.decodeAuthToken(
-        req.headers['proxy-authorization'],
-      );
+      try {
+        const decodedToken = await this.decodeAuthToken(
+          req.headers['proxy-authorization'],
+        );
 
-      if (!decodedToken) {
-        socket.write('HTTP/1.1 407 Proxy Authentication Required\r\n');
-        socket.write('Proxy-Authenticate: Basic realm="Proxy"\r\n');
-        socket.write('\r\n');
+        if (!decodedToken) {
+          socket.write('HTTP/1.1 407 Proxy Authentication Required\r\n');
+          socket.write('Proxy-Authenticate: Basic realm="Proxy"\r\n');
+          socket.write('\r\n');
+          socket.end();
+          return;
+        }
+
+        const credentials = this.getVpnCredentials(decodedToken.region);
+
+        this.proxyConnectService.handleConnect({
+          proxyUrl: credentials.address,
+          proxyAuth: credentials.auth,
+          clientSocket: socket,
+          req,
+        });
+      } catch (error) {
+        if (error instanceof ZoneNotPermittedError) {
+          socket.write('HTTP/1.1 403 Forbidden\r\n');
+          socket.write('Content-Type: text/plain\r\n');
+          socket.write('\r\n');
+          socket.write('403 Forbidden - Zone access not permitted');
+          socket.end();
+          return;
+        }
+        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
         socket.end();
-        return;
       }
-
-      const credentials = this.getVpnCredentials(decodedToken.region);
-
-      this.proxyConnectService.handleConnect({
-        proxyUrl: credentials.address,
-        proxyAuth: credentials.auth,
-        clientSocket: socket,
-        req,
-      });
     });
 
     server.listen(this.configService.get('proxyPort'), () => {
@@ -145,6 +167,11 @@ export class ForwardProxyServer {
     const user = await this.validateToken(token);
     if (!user) {
       return null;
+    }
+
+    if (!user.zones.includes(region)) {
+      this.logger.error(`User does not have access to region: ${region}`);
+      throw new ZoneNotPermittedError(region);
     }
 
     return { region, data: user };
