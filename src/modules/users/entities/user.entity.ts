@@ -23,9 +23,9 @@ export class UserEntity {
 
   @Expose()
   @ApiProperty()
-  createdAt: Date;
+  createdAt?: Date;
 
   @Expose()
   @ApiProperty()
-  updatedAt: Date;
+  updatedAt?: Date;
 }

@@ -66,6 +66,11 @@ export class UserCacheService {
     return exists === 1;
   }
 
+  async invalidateUserTier(uuid: string, tierType: TierType) {
+    const key = `${this.USER_PREFIX}${uuid}`;
+    await this.redis.hdel(key, tierType);
+  }
+
   async getUserTiers(uuid: string, tierType: TierType) {
     const key = `${this.USER_PREFIX}${uuid}`;
     const userData = await this.redis.hget(key, tierType);
@@ -75,5 +80,24 @@ export class UserCacheService {
     }
 
     return JSON.parse(userData);
+  }
+
+  private parseUserDataToTiers(
+    userData: Record<string, string>,
+  ): Record<TierType, TierEntity> {
+    return Object.entries(userData).reduce(
+      (acc, [tierType, tierData]) => {
+        acc[tierType as TierType] = JSON.parse(tierData) as TierEntity;
+        return acc;
+      },
+      {} as Record<TierType, TierEntity>,
+    );
+  }
+
+  async getTiersByUuid(uuid: string): Promise<Record<TierType, TierEntity>> {
+    const key = `${this.USER_PREFIX}${uuid}`;
+    const userData = await this.redis.hgetall(key);
+
+    return this.parseUserDataToTiers(userData);
   }
 }

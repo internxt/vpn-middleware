@@ -5,16 +5,16 @@ import { UserTierModel } from '../../models/user-tier.model';
 import { TierModel } from '../../models/tier.model';
 import { UserEntity } from './entities/user.entity';
 import { TierEntity } from './entities/tier.entity';
-
+import { TierType } from 'src/enums/tiers.enum';
 @Injectable()
 export class UsersRepository {
   constructor(
     @InjectModel(UserModel)
-    private userModel: typeof UserModel,
+    private readonly userModel: typeof UserModel,
     @InjectModel(UserTierModel)
-    private userTierModel: typeof UserTierModel,
+    private readonly userTierModel: typeof UserTierModel,
     @InjectModel(TierModel)
-    private tierModel: typeof TierModel,
+    private readonly tierModel: typeof TierModel,
   ) {}
 
   async createUser(
@@ -55,6 +55,20 @@ export class UsersRepository {
 
   async findTierById(tierId: string): Promise<TierEntity | null> {
     const tier = await this.tierModel.findOne({ where: { id: tierId } });
+    return tier ? this.tierModelToEntity(tier) : null;
+  }
+
+  async findUserTierByType(
+    userUuid: string,
+    type: TierType,
+  ): Promise<TierEntity | null> {
+    const tier = await this.tierModel.findOne({
+      where: { type },
+      include: {
+        model: UserTierModel,
+        where: { userUuid },
+      },
+    });
     return tier ? this.tierModelToEntity(tier) : null;
   }
 
