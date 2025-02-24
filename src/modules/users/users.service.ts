@@ -29,13 +29,13 @@ export class UsersService {
       const tiers = [
         cachedTiers[TierType.INDIVIDUAL],
         cachedTiers[TierType.BUSINESS],
-      ];
+      ].filter((tier) => tier !== undefined);
+
       const user = new UserEntity({
         uuid,
         tiers,
         zones: this.zonesFromTiers(tiers),
       });
-      this.logger.log('Cache hit', user);
       return user;
     }
 
@@ -57,18 +57,6 @@ export class UsersService {
       );
       user.tiers.push(userTier.tier);
       await this.userCacheService.setUser(user);
-    }
-
-    return user;
-  }
-
-  async getOrCreateFreeUser(uuid: string) {
-    let user = await this.usersRepository.getUserBy({ uuid });
-
-    if (!user) {
-      user = await this.usersRepository.createUser({ uuid });
-
-      await this.usersRepository.createUserTier(uuid, freeTierId);
     }
 
     return user;

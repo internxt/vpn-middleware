@@ -5,11 +5,9 @@ import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { ProxyToken } from './interfaces/decoded-token.interface';
-import { UserCacheService } from '../modules/users/userCache.service';
 import { UsersService } from 'src/modules/users/users.service';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
-import { AuthTokenPayload } from '../modules/auth/interfaces';
-import { TierType } from 'src/enums/tiers.enum';
+
 @Injectable()
 export class ForwardProxyServer {
   private readonly logger = new Logger(ForwardProxyServer.name);
@@ -22,7 +20,6 @@ export class ForwardProxyServer {
     private readonly proxyConnectService: ProxyConnectService,
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-    private readonly authCacheService: UserCacheService,
     private readonly usersService: UsersService,
   ) {}
 
@@ -83,43 +80,22 @@ export class ForwardProxyServer {
   }
 
   private async validateToken(token: string): Promise<UserEntity | null> {
-    this.logger.log('Validating token');
     try {
       const decodedToken = await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
-      let mainUser: UserEntity | null = null;
-      const existsInCache = await this.authCacheService.userExists(uuid);
-      if (existsInCache) {
-        mainUser = await this.authCacheService.getUserTiers(
-          uuid,
-          TierType.INDIVIDUAL,
-        );
-      } else {
+      let mainUser = await this.usersService.getUserByUuid(uuid);
+      if (!mainUser) {
         mainUser = await this.usersService.getOrCreateFreeUser(uuid);
         if (!mainUser) {
           this.logger.error('Main user not found');
           return null;
         }
-        await this.authCacheService.setUser(mainUser);
       }
 
       if (workspaces?.owners?.length) {
         const ownerPromises = workspaces.owners.map(async (ownerUuid) => {
-          const ownerExistsInCache =
-            await this.authCacheService.userExists(ownerUuid);
-          if (ownerExistsInCache) {
-            return this.authCacheService.getUserTiers(
-              ownerUuid,
-              TierType.BUSINESS,
-            );
-          }
-          const owner = await this.usersService.getOrCreateFreeUser(ownerUuid);
-          if (owner) {
-            await this.authCacheService.setUser(owner);
-            return owner;
-          }
-          return null;
+          return this.usersService.getUserByUuid(ownerUuid);
         });
 
         const owners = await Promise.all(ownerPromises);
@@ -127,7 +103,7 @@ export class ForwardProxyServer {
           (owner): owner is UserEntity => owner !== null,
         );
 
-        // Merge tiers
+        // Merge tiers and zones
         if (validOwners.length > 0) {
           const allTiers = [...(mainUser.tiers || [])];
           validOwners.forEach((owner) => {
@@ -136,6 +112,7 @@ export class ForwardProxyServer {
             }
           });
           mainUser.tiers = allTiers;
+          mainUser.zones = [...new Set(allTiers.flatMap((tier) => tier.zones))];
         }
       }
 
