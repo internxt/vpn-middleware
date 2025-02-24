@@ -17,7 +17,7 @@ import { UserEntity } from '../users/entities/user.entity';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Controller('gateway')
-//@UseGuards(GatewayGuard)
+@UseGuards(GatewayGuard)
 export class GatewayController {
   private logger = new Logger(GatewayController.name);
 

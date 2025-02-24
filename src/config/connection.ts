@@ -11,23 +11,6 @@ const databaseConfiguration: SequelizeModuleAsyncOptions = {
     username: configService.get('database.username'),
     password: configService.get('database.password'),
     database: configService.get('database.database'),
-
-    /*    dialect: 'postgres',
-    host: 'localhost',
-    username: 'postgres',
-    password: 'admin',
-    database: 'vpn', */
-    /*     replication: !configService.get('isDevelopment')
-      ? configService.get('database.replication')
-      : false, */
-    /*     pool: {
-      maxConnections: Number.MAX_SAFE_INTEGER,
-      maxIdleTime: 30000,
-      max: 20,
-      min: 0,
-      idle: 20000,
-      acquire: 20000,
-    },
     dialectOptions: configService.get('isProduction')
       ? {
           ssl: {
@@ -36,7 +19,7 @@ const databaseConfiguration: SequelizeModuleAsyncOptions = {
           },
           application_name: 'vpn-middleware',
         }
-      : {}, */
+      : {},
   }),
 };
 
