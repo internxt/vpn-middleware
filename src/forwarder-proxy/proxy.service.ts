@@ -49,6 +49,7 @@ export class ForwardProxyServer {
           proxyAuth: credentials.auth,
           req,
           res,
+          throttlingSpeed: decodedToken.isFreeUser ? 125000 : 0,
         });
       } catch (error) {
         if (error instanceof ZoneNotPermittedError) {
@@ -83,6 +84,7 @@ export class ForwardProxyServer {
           proxyAuth: credentials.auth,
           clientSocket: socket,
           req,
+          throttlingSpeed: decodedToken.isFreeUser ? 125000 : 0,
         });
       } catch (error) {
         if (error instanceof ZoneNotPermittedError) {
@@ -176,7 +178,7 @@ export class ForwardProxyServer {
       throw new ZoneNotPermittedError(region);
     }
 
-    const isFreeUser = user.tiers.some((tier) => !this.isFreeTier(tier));
+    const isFreeUser = user.tiers.some((tier) => this.isFreeTier(tier));
 
     return { region, data: user, isFreeUser };
   }

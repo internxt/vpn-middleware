@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import http from 'http';
 import https from 'https';
-import { Duplex } from 'stream';
+import { Duplex, pipeline } from 'stream';
 import { URL } from 'url';
+import { Throttle, ThrottleGroup } from 'stream-throttle';
 
 @Injectable()
 export class ProxyConnectService {
@@ -15,11 +16,13 @@ export class ProxyConnectService {
     proxyAuth,
     clientSocket,
     req,
+    throttlingSpeed,
   }: {
     proxyUrl: string;
     proxyAuth: { username: string; password: string };
     clientSocket: Duplex;
     req: http.IncomingMessage;
+    throttlingSpeed?: number;
   }) {
     const url = new URL(proxyUrl);
 
@@ -48,8 +51,22 @@ export class ProxyConnectService {
     proxyRequest.on('connect', (proxyRes, proxySocket) => {
       //this.logger.debug(`Connected through proxy: ${req.url}`);
       clientSocket.write('HTTP/1.1 200 OK\r\n\r\n');
-      clientSocket.pipe(proxySocket);
-      proxySocket.pipe(clientSocket);
+      if (throttlingSpeed) {
+        const throttleUploadStream = new Throttle({ rate: 125000 });
+        const throttleDownloadStream = new Throttle({ rate: 125000 });
+        pipeline(
+          clientSocket,
+          throttleUploadStream,
+          proxySocket,
+          throttleDownloadStream,
+          clientSocket,
+          (err) => this.logger.debug('Error with proxy connection', err),
+        );
+      } else {
+        pipeline(clientSocket, proxySocket, clientSocket, (err) =>
+          this.logger.debug('Error with proxy connection', err),
+        );
+      }
     });
 
     proxyRequest.on('error', (err) => {
