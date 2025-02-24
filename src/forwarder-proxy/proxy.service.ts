@@ -8,6 +8,8 @@ import { ProxyToken } from './interfaces/decoded-token.interface';
 import { UsersService } from 'src/modules/users/users.service';
 import { UserEntity } from 'src/modules/users/entities/user.entity';
 import { ZoneNotPermittedError } from './errors/zone-not-permitted.error';
+import { TierEntity } from '../modules/users/entities/tier.entity';
+import { freeTierId } from '../modules/users/constants';
 
 @Injectable()
 export class ForwardProxyServer {
@@ -29,7 +31,7 @@ export class ForwardProxyServer {
 
     const server = http.createServer(async (req, res) => {
       try {
-        const decodedToken = await this.decodeAuthToken(
+        const decodedToken = await this.decodeUserFromToken(
           req.headers['proxy-authorization'],
         );
 
@@ -62,7 +64,7 @@ export class ForwardProxyServer {
     // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
       try {
-        const decodedToken = await this.decodeAuthToken(
+        const decodedToken = await this.decodeUserFromToken(
           req.headers['proxy-authorization'],
         );
 
@@ -145,7 +147,7 @@ export class ForwardProxyServer {
     }
   }
 
-  private async decodeAuthToken(
+  private async decodeUserFromToken(
     authHeader: string,
   ): Promise<ProxyToken | null> {
     this.logger.debug('Decoding auth token', authHeader);
@@ -174,7 +176,9 @@ export class ForwardProxyServer {
       throw new ZoneNotPermittedError(region);
     }
 
-    return { region, data: user };
+    const isFreeUser = user.tiers.some((tier) => !this.isFreeTier(tier));
+
+    return { region, data: user, isFreeUser };
   }
 
   private loadVpnConfigs() {
@@ -194,5 +198,9 @@ export class ForwardProxyServer {
       address: credentials.address,
       auth: { username: credentials.username, password: credentials.pass },
     };
+  }
+
+  private isFreeTier(tier: TierEntity) {
+    return tier.id === freeTierId;
   }
 }
