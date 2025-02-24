@@ -6,8 +6,6 @@ export const redisConfiguration = {
     configService: ConfigService,
   ): Promise<RedisModuleOptions> => ({
     type: 'single',
-    url: `redis://:${configService.get('redis.password')}@${configService.get(
-      'redis.host',
-    )}:${configService.get('redis.port')}`,
+    url: configService.get('redis.connectionString'),
   }),
 };

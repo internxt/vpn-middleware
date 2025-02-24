@@ -8,10 +8,20 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     ConfigModule,
     NestRedisModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        type: 'single',
-        url: `redis://:${configService.get('redis.password')}@${configService.get('redis.host')}:${configService.get('redis.port')}`,
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const uri = configService.get('redis.connectionString');
+
+        if (!uri) {
+          throw new Error('[CONFIG]: REDIS_CONNECTION_STRING is missing');
+        }
+
+        return {
+          type: 'single',
+          enableAutoPipelining: true,
+          showFriendlyErrorStack: true,
+          url: configService.get('redis.connectionString'),
+        };
+      },
       inject: [ConfigService],
     }),
   ],
