@@ -62,6 +62,18 @@ export class UsersService {
     return user;
   }
 
+  async getOrCreateFreeUser(uuid: string) {
+    let user = await this.usersRepository.getUserBy({ uuid });
+
+    if (!user) {
+      user = await this.usersRepository.createUser({ uuid });
+
+      await this.usersRepository.createUserTier(uuid, freeTierId);
+    }
+
+    return user;
+  }
+
   async deleteUserByTier(userUuid: string, tierId: string): Promise<number> {
     const deletedRows = await this.usersRepository.deleteUserTier(
       userUuid,

@@ -5,12 +5,12 @@ WORKDIR /usr/app
 COPY package.json ./
 COPY yarn.lock ./
 
-# Copy .npmrc file if it exists
-RUN [ -f .npmrc ] && cp .npmrc /usr/app/ || echo "npmrc file not found"
-
 RUN yarn
 COPY . ./
 
 RUN yarn build
 
 CMD yarn migrate && yarn start:dev
+
+EXPOSE 8082
+EXPOSE 3005

@@ -77,8 +77,8 @@ export class ForwardProxyServer {
       });
     });
 
-    server.listen(8081, () => {
-      this.logger.log('Proxy server running on port 8081');
+    server.listen(this.configService.get('proxyPort'), () => {
+      this.logger.log('Proxy server running on port 8082');
     });
   }
 

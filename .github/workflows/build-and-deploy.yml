@@ -40,13 +40,13 @@ jobs:
       - uses: actions/checkout@master
 
       # Deployment
-      - name: Deploy update on B2C cluster
+      - name: Deploy update
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.KUBE_CONFIG_DATA }}
-          command: set image --record deployment/vpn-server vpn-server=${{ secrets.DOCKERHUB_USERNAME }}/vpn-server:${{ github.sha }} -n vpn
-      - name: Verify update on B2C cluster
+          command: set image --record deployment/vpn-server vpn-server=${{ secrets.DOCKERHUB_USERNAME }}/vpn-server:${{ github.sha }}
+      - name: Verify update
         uses: steebchen/kubectl@v2.0.0
         with:
           config: ${{ secrets.KUBE_CONFIG_DATA }}
-          command: rollout status deployment/vpn-server -n vpn
+          command: rollout status deployment/vpn-server
