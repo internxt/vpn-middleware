@@ -54,6 +54,7 @@ export class ForwardProxyServer {
           res.end('403 Forbidden - Zone access not permitted');
           return;
         }
+        this.logger.error('Unexpected error on http', error);
         res.writeHead(500);
         res.end('Internal Server Error');
       }
@@ -91,6 +92,7 @@ export class ForwardProxyServer {
           socket.end();
           return;
         }
+        this.logger.error('Unexpected error on https', error);
         socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
         socket.end();
       }
@@ -106,19 +108,17 @@ export class ForwardProxyServer {
       const decodedToken = await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
-      let mainUser = await this.usersService.getUserByUuid(uuid);
+      let mainUser = await this.usersService.getUserAndTiers(uuid);
+
       if (!mainUser) {
-        mainUser = await this.usersService.getOrCreateFreeUser(uuid);
-        if (!mainUser) {
-          this.logger.error('Main user not found');
-          return null;
-        }
+        this.logger.error('Main user not found');
+        return null;
       }
 
       if (workspaces?.owners?.length) {
-        const ownerPromises = workspaces.owners.map(async (ownerUuid) => {
-          return this.usersService.getUserByUuid(ownerUuid);
-        });
+        const ownerPromises = workspaces.owners.map((ownerUuid) =>
+          this.usersService.getUserByUuid(ownerUuid),
+        );
 
         const owners = await Promise.all(ownerPromises);
         const validOwners = owners.filter(

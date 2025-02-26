@@ -9,7 +9,7 @@ import { UserTierModel } from '../../models/user-tier.model';
 import { TierModel } from '../../models/tier.model';
 import { UsersRepository } from './users.repository';
 import { RedisModule } from '../redis/redis.module';
-import { UserCacheService } from './userCache.service';
+import { UserCacheService } from './users-cache.service';
 
 @Module({
   imports: [
