@@ -25,10 +25,25 @@ export default () => ({
       username: process.env.FR_VPN_USERNAME,
       pass: process.env.FR_VPN_PASSWORD,
     },
-    /* OTHER_ZONES: {
-      address: '',
-      username: '',
-      pass: '',
-    }, */
+    PL: {
+      address: process.env.PL_VPN_SERVER_URL,
+      username: process.env.PL_VPN_USERNAME,
+      pass: process.env.PL_VPN_PASSWORD,
+    },
+    CA: {
+      address: process.env.CA_VPN_SERVER_URL,
+      username: process.env.CA_VPN_USERNAME,
+      pass: process.env.CA_VPN_PASSWORD,
+    },
+    DE: {
+      address: process.env.DE_VPN_SERVER_URL,
+      username: process.env.DE_VPN_USERNAME,
+      pass: process.env.DE_VPN_PASSWORD,
+    },
+    UK: {
+      address: process.env.UK_VPN_SERVER_URL,
+      username: process.env.UK_VPN_USERNAME,
+      pass: process.env.UK_VPN_PASSWORD,
+    },
   },
 });
