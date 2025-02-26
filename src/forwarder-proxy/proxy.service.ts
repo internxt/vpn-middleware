@@ -27,6 +27,8 @@ export class ForwardProxyServer {
   async startProxyServer() {
     this.loadVpnConfigs();
 
+    const SERVER_PORT = await this.configService.get('proxyPort');
+
     const server = http.createServer(async (req, res) => {
       try {
         const decodedToken = await this.decodeAuthToken(
@@ -98,8 +100,8 @@ export class ForwardProxyServer {
       }
     });
 
-    server.listen(this.configService.get('proxyPort'), () => {
-      this.logger.log('Proxy server running on port 8082');
+    server.listen(SERVER_PORT, () => {
+      this.logger.log(`Proxy server running on port ${SERVER_PORT}`);
     });
   }
 
