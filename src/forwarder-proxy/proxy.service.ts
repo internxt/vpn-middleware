@@ -119,8 +119,13 @@ export class ForwardProxyServer {
       let mainUser = await this.usersService.getUserAndTiers(uuid);
 
       if (!mainUser) {
-        this.logger.error('Main user not found');
-        return null;
+        const freeUser = await this.usersService.getOrCreateUserAndTiers(uuid);
+        mainUser = freeUser;
+
+        if (!mainUser) {
+          this.logger.error('Main user not found');
+          return null;
+        }
       }
 
       if (workspaces?.owners?.length) {
