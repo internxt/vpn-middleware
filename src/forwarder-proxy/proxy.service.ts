@@ -114,6 +114,8 @@ export class ForwardProxyServer {
       const decodedToken = await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
+      this.logger.log(`Authenticating user: ${uuid}`);
+
       let mainUser = await this.usersService.getUserAndTiers(uuid);
 
       if (!mainUser) {
