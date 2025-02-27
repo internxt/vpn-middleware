@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { anonymousUserUuid, freeTierId } from './constants';
 import { UsersRepository } from './users.repository';
-import { UserCacheService } from './userCache.service';
+import { UserCacheService } from './users-cache.service';
 import { TierType } from 'src/enums/tiers.enum';
 import { UserEntity } from './entities/user.entity';
 import { TierEntity } from './entities/tier.entity';
@@ -15,7 +15,8 @@ export class UsersService {
   ) {}
 
   private zonesFromTiers(tiers: TierEntity[]) {
-    return [...new Set(tiers.flatMap((tier) => tier.zones))];
+    const validTiers = tiers.filter((tiers) => tiers && tiers.zones);
+    return [...new Set(validTiers.flatMap((tier) => tier.zones))];
   }
 
   async getAnynomousUser() {
@@ -41,24 +42,9 @@ export class UsersService {
 
     const user = await this.usersRepository.getUserBy({ uuid });
     if (user) {
-      await this.userCacheService.setUser(user);
+      const userTiers = await this.usersRepository.findUserTiers(uuid);
+      await this.userCacheService.setUserAndTiers(user, userTiers);
     }
-    return user;
-  }
-
-  async getOrCreateFreeUser(uuid: string) {
-    let user = await this.getUserByUuid(uuid);
-
-    if (!user) {
-      user = await this.usersRepository.createUser({ uuid });
-      const userTier = await this.usersRepository.createUserTier(
-        uuid,
-        freeTierId,
-      );
-      user.tiers.push(userTier.tier);
-      await this.userCacheService.setUser(user);
-    }
-
     return user;
   }
 
@@ -71,14 +57,46 @@ export class UsersService {
     const tier = await this.usersRepository.findTierById(tierId);
 
     if (tier) {
-      await this.userCacheService.invalidateUserTier(userUuid, tier.type);
+      await this.userCacheService.deleteUser(userUuid);
     }
 
     return deletedRows;
   }
 
   async getFreeTier() {
-    return await this.usersRepository.findTierById(freeTierId);
+    return this.usersRepository.findTierById(freeTierId);
+  }
+
+  async getOrCreateUserAndTiers(
+    uuid: string,
+    workspaceOwnersIds: string[] = [],
+  ) {
+    let user = await this.usersRepository.getUserAndTiersByUuid(uuid);
+
+    if (!user) {
+      user = await this.usersRepository.createUser({ uuid });
+    }
+
+    if (!user?.tiers?.length) {
+      const freeTier = await this.getFreeTier();
+      await this.usersRepository.createUserTier(user.uuid, freeTier.id);
+      user.tiers = [freeTier];
+    }
+
+    const workspaceTiers = await Promise.all(
+      workspaceOwnersIds.map((ownerId) =>
+        this.usersRepository.findUserTierByType(ownerId, TierType.BUSINESS),
+      ),
+    );
+    const tiers = [...workspaceTiers, ...user.tiers];
+    const allZones = this.zonesFromTiers(tiers);
+
+    if (allZones.length === 0) {
+      const freeTier = await this.getFreeTier();
+      allZones.push(...freeTier.zones);
+    }
+
+    return { ...user, zones: allZones };
   }
 
   async getUserAndTiers(uuid: string) {
@@ -132,19 +150,12 @@ export class UsersService {
       createUserDto.tierId,
     );
 
-    const cachedUserTiers = await this.userCacheService.getTiersByUuid(
+    const userAndTiers = await this.usersRepository.getUserAndTiersByUuid(
       createUserDto.uuid,
     );
 
-    cachedUserTiers[tier.type] = tier;
+    await this.userCacheService.deleteUser(user.uuid);
 
-    user.tiers = [
-      cachedUserTiers[TierType.INDIVIDUAL],
-      cachedUserTiers[TierType.BUSINESS],
-    ];
-
-    await this.userCacheService.setUser(user);
-
-    return user;
+    return userAndTiers;
   }
 }

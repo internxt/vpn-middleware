@@ -43,7 +43,12 @@ export class UsersRepository {
     const user = await this.userModel.findOne({
       where: { uuid },
       include: [
-        { model: TierModel, as: 'tiers', attributes: ['id', 'type', 'zones'] },
+        {
+          model: TierModel,
+          as: 'tiers',
+          attributes: ['id', 'type', 'zones'],
+          through: { attributes: [] },
+        },
       ],
     });
     return user ? this.userModelToEntity(user) : null;

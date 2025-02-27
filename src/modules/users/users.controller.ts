@@ -2,11 +2,12 @@ import { Controller, Get, SerializeOptions, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { AuthGuard } from '../auth/auth.guard';
-import { User } from '../auth/decorators/user.decorator';
+import { User } from '../../decorators/user.decorator';
 import { AuthService } from '../auth/auth.service';
 import { UserModel } from '../../models/user.model';
 import { UserEntity } from './entities/user.entity';
 import { GetAnonymousUserTokenDto } from './dto/get-anonymous-token.dto';
+import { WorkspaceOwnersIds } from '../../decorators/workspace-owners.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -22,8 +23,14 @@ export class UsersController {
     summary: 'Get user data and tier',
   })
   @ApiResponse({ type: UserEntity })
-  async getUserData(@User() user: UserModel): Promise<UserEntity> {
-    const userData = await this.usersService.getUserAndTiers(user.uuid);
+  async getUserData(
+    @User() user: UserModel,
+    @WorkspaceOwnersIds() ownerIds: string[],
+  ): Promise<UserEntity> {
+    const userData = await this.usersService.getOrCreateUserAndTiers(
+      user.uuid,
+      ownerIds,
+    );
     return userData;
   }
 

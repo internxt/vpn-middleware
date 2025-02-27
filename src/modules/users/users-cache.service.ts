@@ -8,7 +8,7 @@ import { TierType } from 'src/enums/tiers.enum';
 @Injectable()
 export class UserCacheService {
   private readonly USER_PREFIX = 'user:';
-  private readonly CACHE_TTL = 3600;
+  private readonly CACHE_TTL = 1800;
 
   constructor(@InjectRedis() private readonly redis: Redis) {}
 
@@ -32,9 +32,10 @@ export class UserCacheService {
     );
   }
 
-  async setUser(user: UserEntity): Promise<void> {
+  async setUserAndTiers(user: UserEntity, tiers: TierEntity[]): Promise<void> {
     const key = `${this.USER_PREFIX}${user.uuid}`;
-    const groupedTiers = this.groupTiersByType(user.tiers || []);
+
+    const groupedTiers = this.groupTiersByType(tiers || []);
     const redisData: Record<string, string> = {};
 
     // Handle INDIVIDUAL tier
@@ -52,34 +53,18 @@ export class UserCacheService {
     }
 
     if (Object.keys(redisData).length > 0) {
-      // First delete any existing key to avoid type conflicts
-      await this.redis.del(key);
-      await this.redis.hset(key, redisData);
-      // Set expiration
-      await this.redis.expire(key, this.CACHE_TTL);
+      await this.redis
+        .multi()
+        .del(key)
+        .hset(key, redisData)
+        .expire(key, this.CACHE_TTL)
+        .exec();
     }
   }
 
-  async userExists(uuid: string): Promise<boolean> {
+  async deleteUser(uuid: string) {
     const key = `${this.USER_PREFIX}${uuid}`;
-    const exists = await this.redis.exists(key);
-    return exists === 1;
-  }
-
-  async invalidateUserTier(uuid: string, tierType: TierType) {
-    const key = `${this.USER_PREFIX}${uuid}`;
-    await this.redis.hdel(key, tierType);
-  }
-
-  async getUserTiers(uuid: string, tierType: TierType) {
-    const key = `${this.USER_PREFIX}${uuid}`;
-    const userData = await this.redis.hget(key, tierType);
-
-    if (!userData) {
-      return null;
-    }
-
-    return JSON.parse(userData);
+    await this.redis.del(key);
   }
 
   private parseUserDataToTiers(
@@ -97,7 +82,6 @@ export class UserCacheService {
   async getTiersByUuid(uuid: string): Promise<Record<TierType, TierEntity>> {
     const key = `${this.USER_PREFIX}${uuid}`;
     const userData = await this.redis.hgetall(key);
-
     return this.parseUserDataToTiers(userData);
   }
 }
