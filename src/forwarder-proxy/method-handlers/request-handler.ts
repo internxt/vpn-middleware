@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import http from 'http';
 import https from 'https';
+import { pipeline } from 'stream';
+import { Throttle } from 'stream-throttle';
 import { URL } from 'url';
 
 @Injectable()
@@ -14,6 +16,7 @@ export class ProxyRequestService {
     proxyAuth,
     req,
     res,
+    throttlingSpeed,
   }: {
     proxyUrl: string;
     proxyAuth: { username: string; password: string };
@@ -21,6 +24,7 @@ export class ProxyRequestService {
     res: http.ServerResponse<http.IncomingMessage> & {
       req: http.IncomingMessage;
     };
+    throttlingSpeed?: number;
   }) {
     const url = new URL(proxyUrl);
 
@@ -58,7 +62,14 @@ export class ProxyRequestService {
         `Proxying request to ${url.hostname} - Status: ${proxyResponse.statusCode}`,
       );
       res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
-      proxyResponse.pipe(res);
+      if (throttlingSpeed) {
+        const throttleDownloadStream = new Throttle({ rate: 125000 });
+        pipeline(proxyResponse, throttleDownloadStream, res, (err) =>
+          this.logger.error('Error with proxy connection', err),
+        );
+      } else {
+        proxyResponse.pipe(res);
+      }
     });
 
     proxyRequest.on('error', (err) => {
@@ -73,7 +84,14 @@ export class ProxyRequestService {
       req.destroy();
     });
 
-    req.pipe(proxyRequest);
+    if (throttlingSpeed) {
+      const throttleUploadStream = new Throttle({ rate: 125000 });
+      pipeline(req, throttleUploadStream, proxyRequest, (err) =>
+        this.logger.error('Error with proxy connection', err),
+      );
+    } else {
+      req.pipe(proxyRequest);
+    }
   }
 
   private addProxyAuthToHeaders(
