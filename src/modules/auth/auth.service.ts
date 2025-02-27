@@ -14,8 +14,12 @@ export class AuthService {
     return decodedToken?.payload;
   }
 
-  async createProxyToken(payload: AuthTokenPayload): Promise<string> {
-    const encodedToken = await this.jwtService.signAsync({ payload });
+  async createProxyToken(
+    payload: AuthTokenPayload,
+    expiresIn?: string,
+  ): Promise<string> {
+    const options = expiresIn ? { expiresIn } : {};
+    const encodedToken = await this.jwtService.signAsync({ payload }, options);
 
     return encodedToken;
   }

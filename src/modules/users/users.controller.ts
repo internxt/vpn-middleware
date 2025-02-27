@@ -40,9 +40,12 @@ export class UsersController {
   async getAnynomousUserToken(): Promise<{ token: string }> {
     const anonymousUser = await this.usersService.getAnynomousUser();
 
-    const encodedToken = await this.authService.createProxyToken({
-      uuid: anonymousUser.uuid,
-    });
+    const encodedToken = await this.authService.createProxyToken(
+      {
+        uuid: anonymousUser.uuid,
+      },
+      '5d',
+    );
 
     return { token: encodedToken };
   }
