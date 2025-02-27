@@ -15,7 +15,8 @@ export class UsersService {
   ) {}
 
   private zonesFromTiers(tiers: TierEntity[]) {
-    return [...new Set(tiers.flatMap((tier) => tier.zones))];
+    const validTiers = tiers.filter((tiers) => tiers && tiers.zones);
+    return [...new Set(validTiers.flatMap((tier) => tier.zones))];
   }
 
   async getAnynomousUser() {
