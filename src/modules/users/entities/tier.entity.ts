@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose } from 'class-transformer';
-import { TierType } from 'src/enums/tiers.enum';
+import { TierType } from '../../../enums/tiers.enum';
 export class TierEntity {
   constructor(partial: Partial<TierEntity>) {
     Object.assign(this, partial);

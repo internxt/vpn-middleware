@@ -7,7 +7,7 @@ import {
   BelongsToMany,
 } from 'sequelize-typescript';
 import { UserTierModel } from './user-tier.model';
-import { TierType } from 'src/enums/tiers.enum';
+import { TierType } from '../enums/tiers.enum';
 import { UserModel } from './user.model';
 
 @Table({

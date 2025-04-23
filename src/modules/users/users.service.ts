@@ -3,7 +3,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { anonymousUserUuid, freeTierId } from './constants';
 import { UsersRepository } from './users.repository';
 import { UserCacheService } from './users-cache.service';
-import { TierType } from 'src/enums/tiers.enum';
+import { TierType } from '../../enums/tiers.enum';
 import { UserEntity } from './entities/user.entity';
 import { TierEntity } from './entities/tier.entity';
 @Injectable()

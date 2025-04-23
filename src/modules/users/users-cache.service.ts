@@ -3,7 +3,7 @@ import { InjectRedis } from '@nestjs-modules/ioredis';
 import Redis from 'ioredis';
 import { UserEntity } from './entities/user.entity';
 import { TierEntity } from './entities/tier.entity';
-import { TierType } from 'src/enums/tiers.enum';
+import { TierType } from '../../enums/tiers.enum';
 
 @Injectable()
 export class UserCacheService {
@@ -70,6 +70,9 @@ export class UserCacheService {
   private parseUserDataToTiers(
     userData: Record<string, string>,
   ): Record<TierType, TierEntity> {
+    if (!userData) {
+      return {} as Record<TierType, TierEntity>;
+    }
     return Object.entries(userData).reduce(
       (acc, [tierType, tierData]) => {
         acc[tierType as TierType] = JSON.parse(tierData) as TierEntity;
