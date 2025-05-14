@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { RedisModule } from '@nestjs-modules/ioredis';
 import databaseConfiguration from './config/connection';
@@ -27,13 +25,11 @@ import { ExtendedHttpExceptionFilter } from './common/http-exception-filter-exte
     UsersModule,
     GatewayModule,
   ],
-  controllers: [AppController],
   providers: [
     {
       provide: APP_FILTER,
       useClass: ExtendedHttpExceptionFilter,
     },
-    AppService,
   ],
 })
 export class AppModule {}

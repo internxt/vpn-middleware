@@ -5,8 +5,8 @@ import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
 import { ConfigService } from '@nestjs/config';
 import { ProxyToken } from './interfaces/decoded-token.interface';
-import { UsersService } from 'src/modules/users/users.service';
-import { UserEntity } from 'src/modules/users/entities/user.entity';
+import { UsersService } from '../modules/users/users.service';
+import { UserEntity } from '../modules/users/entities/user.entity';
 import { ZoneNotPermittedError } from './errors/zone-not-permitted.error';
 import { TierEntity } from '../modules/users/entities/tier.entity';
 import { freeTierId } from '../modules/users/constants';
@@ -45,7 +45,6 @@ export class ForwardProxyServer {
 
         const credentials = this.getVpnCredentials(decodedToken.region);
 
-        // This handles any HTTP request
         this.proxyRequestService.handleRequest({
           proxyUrl: credentials.address,
           proxyAuth: credentials.auth,
@@ -65,7 +64,6 @@ export class ForwardProxyServer {
       }
     });
 
-    // Https connections need to handle connect to create TLS tunnels
     server.on('connect', async (req, socket, head) => {
       try {
         const decodedToken = await this.decodeUserFromToken(
@@ -138,7 +136,6 @@ export class ForwardProxyServer {
           (owner): owner is UserEntity => owner !== null,
         );
 
-        // Merge tiers and zones
         if (validOwners.length > 0) {
           const allTiers = [...(mainUser.tiers || [])];
           validOwners.forEach((owner) => {
