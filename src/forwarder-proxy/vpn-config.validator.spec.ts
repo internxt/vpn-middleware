@@ -1,8 +1,8 @@
-import { Logger } from '@nestjs/common';
 import {
   validateVpnConfig,
   validateAllVpnConfigs,
 } from './vpn-config.validator';
+import { InvalidConfigurationError } from './errors/invalid-configuration.error';
 
 jest.mock('@nestjs/common', () => ({
   ...jest.requireActual('@nestjs/common'),
@@ -21,14 +21,14 @@ describe('VpnConfigValidator', () => {
     username: 'user',
     pass: 'pass',
   };
-  const zone = 'zoneA';
-  let loggerMock: jest.Mocked<Logger>;
 
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe('validateVpnConfig', () => {
+    const zone = 'zoneA';
+
     it('should pass for valid configuration', () => {
       expect(() => validateVpnConfig(zone, validConfig)).not.toThrow();
     });
@@ -36,28 +36,28 @@ describe('VpnConfigValidator', () => {
     it('should throw if address is missing', () => {
       const invalidConfig = { ...validConfig, address: '' };
       expect(() => validateVpnConfig(zone, invalidConfig)).toThrow(
-        `VPN URL for zone "${zone}" is missing.`,
+        InvalidConfigurationError,
       );
     });
 
     it('should throw if port is missing from address', () => {
       const invalidConfig = { ...validConfig, address: 'http://localhost' };
       expect(() => validateVpnConfig(zone, invalidConfig)).toThrow(
-        `VPN port for zone "${zone}" is missing.`,
+        InvalidConfigurationError,
       );
     });
 
     it('should throw if username is missing', () => {
       const invalidConfig = { ...validConfig, username: '' };
       expect(() => validateVpnConfig(zone, invalidConfig)).toThrow(
-        `VPN username for zone "${zone}" is missing.`,
+        InvalidConfigurationError,
       );
     });
 
     it('should throw if password is missing', () => {
       const invalidConfig = { ...validConfig, pass: '' };
       expect(() => validateVpnConfig(zone, invalidConfig)).toThrow(
-        `VPN password for zone "${zone}" is missing.`,
+        InvalidConfigurationError,
       );
     });
   });
@@ -78,7 +78,7 @@ describe('VpnConfigValidator', () => {
         zoneC: { ...validConfig, address: '' },
       };
       expect(() => validateAllVpnConfigs(invalidConfigs)).toThrow(
-        `VPN URL for zone "zoneC" is missing.`,
+        InvalidConfigurationError,
       );
     });
 

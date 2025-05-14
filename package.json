@@ -63,6 +63,7 @@
     "@types/sequelize": "^4.28.20",
     "@types/stream-throttle": "^0.1.4",
     "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
     "chance": "^1.1.12",
     "cross-env": "^7.0.3",
     "eslint": "^9.18.0",

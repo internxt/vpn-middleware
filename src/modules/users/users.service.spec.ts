@@ -28,18 +28,9 @@ describe('UsersService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        {
-          provide: UsersRepository,
-          useValue: createMock<UsersRepository>(),
-        },
-        {
-          provide: UserCacheService,
-          useValue: createMock<UserCacheService>(),
-        },
-      ],
+      providers: [UsersService],
     })
+      .useMocker(createMock)
       .setLogger(createMock<Logger>())
       .compile();
 

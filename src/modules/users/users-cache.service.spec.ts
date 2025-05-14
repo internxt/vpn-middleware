@@ -21,10 +21,10 @@ describe('UserCacheService', () => {
 
   const mockUser = newUser();
   const mockIndividualTier = newTier({
-    attributes: { type: TierType.INDIVIDUAL, id: 'ind-tier', zones: ['zoneA'] },
+    attributes: { type: TierType.INDIVIDUAL, zones: ['zoneA'] },
   });
   const mockBusinessTier = newTier({
-    attributes: { type: TierType.BUSINESS, id: 'bus-tier', zones: ['zoneB'] },
+    attributes: { type: TierType.BUSINESS, zones: ['zoneB'] },
   });
   const cacheTtl = 1800;
   const userKey = `user:${mockUser.uuid}`;

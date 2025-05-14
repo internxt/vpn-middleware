@@ -23,23 +23,8 @@ describe('UsersController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
-      providers: [
-        {
-          provide: UsersService,
-          useValue: createMock<UsersService>(),
-        },
-        {
-          provide: AuthService,
-          useValue: createMock<AuthService>(),
-        },
-      ],
     })
-      .overrideGuard(AuthGuard)
-      .useValue(
-        createMock<AuthGuard>({
-          canActivate: jest.fn().mockResolvedValue(true),
-        }),
-      )
+      .useMocker(createMock)
       .compile();
 
     controller = module.get<UsersController>(UsersController);

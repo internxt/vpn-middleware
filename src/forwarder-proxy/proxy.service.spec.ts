@@ -13,14 +13,6 @@ import { freeTierId } from '../modules/users/constants';
 import http from 'http';
 import { Duplex } from 'stream';
 
-const mockServiceLogger = {
-  log: jest.fn(),
-  error: jest.fn(),
-  warn: jest.fn(),
-  debug: jest.fn(),
-  verbose: jest.fn(),
-};
-
 describe('ForwardProxyServer', () => {
   let service: ForwardProxyServer;
   let mockRequestService: jest.Mocked<ProxyRequestService>;
@@ -35,25 +27,12 @@ describe('ForwardProxyServer', () => {
   };
 
   beforeEach(async () => {
-    Object.values(mockServiceLogger).forEach((mockFn) => mockFn.mockClear());
-
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        ForwardProxyServer,
-        {
-          provide: ProxyRequestService,
-          useValue: createMock<ProxyRequestService>(),
-        },
-        {
-          provide: ProxyConnectService,
-          useValue: createMock<ProxyConnectService>(),
-        },
-        { provide: AuthService, useValue: createMock<AuthService>() },
-        { provide: ConfigService, useValue: createMock<ConfigService>() },
-        { provide: UsersService, useValue: createMock<UsersService>() },
-        { provide: Logger, useValue: mockServiceLogger },
-      ],
-    }).compile();
+      providers: [ForwardProxyServer],
+    })
+      .setLogger(createMock<Logger>())
+      .useMocker(() => createMock())
+      .compile();
 
     service = module.get<ForwardProxyServer>(ForwardProxyServer);
     mockRequestService = module.get(ProxyRequestService);
@@ -74,7 +53,7 @@ describe('ForwardProxyServer', () => {
       return undefined;
     });
 
-    await service['loadVpnConfigs']();
+    service['loadVpnConfigs']();
   });
 
   afterEach(() => {
@@ -334,8 +313,6 @@ describe('ForwardProxyServer', () => {
     let mockCreateServer: jest.SpyInstance;
 
     beforeEach(() => {
-      Object.values(mockServiceLogger).forEach((mock) => mock.mockClear());
-
       mockServer = createMock<http.Server>();
       mockServer.on.mockReturnValue(mockServer);
       mockServer.listen.mockImplementation((port, callback) => {

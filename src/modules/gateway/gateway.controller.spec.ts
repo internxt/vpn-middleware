@@ -5,7 +5,7 @@ import { UsersService } from '../users/users.service';
 import { Logger } from '@nestjs/common';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { UserEntity } from '../users/entities/user.entity';
-import { GatewayGuard } from '../auth/gateway.guard';
+import { v4 } from 'uuid';
 
 describe('GatewayController', () => {
   let controller: GatewayController;
@@ -21,12 +21,6 @@ describe('GatewayController', () => {
         },
       ],
     })
-      .overrideGuard(GatewayGuard)
-      .useValue(
-        createMock<GatewayGuard>({
-          canActivate: jest.fn().mockResolvedValue(true),
-        }),
-      )
       .setLogger(createMock<Logger>())
       .compile();
 
@@ -39,13 +33,15 @@ describe('GatewayController', () => {
   });
 
   describe('createOrUpdate', () => {
-    it('should call usersService.createOrUpdateUser and return user data', async () => {
+    it('should call services and return user data', async () => {
+      const userUuid = v4();
+      const tierId = v4();
       const createUserDto: CreateUserDto = {
-        uuid: 'user-uuid',
-        tierId: 'tier-uuid',
+        uuid: userUuid,
+        tierId: tierId,
       };
       const expectedUser = new UserEntity({
-        uuid: 'user-uuid',
+        uuid: userUuid,
         tiers: [],
         zones: [],
       });
@@ -63,10 +59,9 @@ describe('GatewayController', () => {
   });
 
   describe('deleteUserByTier', () => {
-    it('should call usersService.deleteUserByTier', async () => {
-      const userUuid = 'user-uuid-to-delete';
-      const tierId = 'tier-uuid-to-remove';
-      jest.spyOn(usersService, 'deleteUserByTier').mockResolvedValue(1);
+    it('should call the service with the expected arguments', async () => {
+      const userUuid = v4();
+      const tierId = v4();
 
       await controller.deleteUserByTier(userUuid, tierId);
 
@@ -76,7 +71,7 @@ describe('GatewayController', () => {
       );
     });
 
-    it('should handle errors from usersService.deleteUserByTier', async () => {
+    it('should handle errors thrown by the service', async () => {
       const userUuid = 'user-uuid-error';
       const tierId = 'tier-uuid-error';
       const error = new Error('Deletion failed');
