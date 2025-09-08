@@ -79,7 +79,6 @@ export class ProxyRequestService {
     });
 
     req.on('error', () => {
-      this.logger.error('HTTP connection aborted by client');
       proxyRequest.destroy();
       req.destroy();
     });

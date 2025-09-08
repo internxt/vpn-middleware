@@ -77,7 +77,6 @@ export class ProxyConnectService {
     proxyRequest.end();
 
     clientSocket.on('error', () => {
-      this.logger.error('Connection aborted by client');
       proxyRequest.destroy();
       clientSocket.destroy();
     });
