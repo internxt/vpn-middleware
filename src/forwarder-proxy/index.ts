@@ -17,6 +17,7 @@ export async function bootstrapServer() {
       colors: config.isDevelopment,
       prefix: 'Proxy-middleware',
       compact: true,
+      logLevels: config.isDevelopment ? ['debug'] : ['log'],
     }),
   });
   const proxyService = app.get(ForwardProxyServer);
