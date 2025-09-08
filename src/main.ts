@@ -21,6 +21,7 @@ async function bootstrap() {
       colors: config.isDevelopment,
       prefix: 'Proxy-api',
       compact: true,
+      logLevels: config.isDevelopment ? ['debug'] : ['log'],
     }),
   });
 
