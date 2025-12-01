@@ -12,6 +12,18 @@ import configuration from '../config/configuration';
 const config = configuration();
 
 export async function bootstrapServer() {
+  const logger = new Logger('ProxyBootstrap');
+
+  process.on('uncaughtException', (error: Error) => {
+    logger.error('Uncaught Exception:', error);
+    logger.error(error.stack);
+  });
+
+  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+    logger.error('Unhandled Rejection at:', promise);
+    logger.error('Reason:', reason);
+  });
+
   const app = await NestFactory.createApplicationContext(ProxyModule, {
     logger: new ConsoleLogger({
       colors: config.isDevelopment,

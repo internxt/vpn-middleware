@@ -3,7 +3,7 @@ import http from 'http';
 import https from 'https';
 import { Duplex, pipeline } from 'stream';
 import { URL } from 'url';
-import { Throttle, ThrottleGroup } from 'stream-throttle';
+import { Throttle } from 'stream-throttle';
 
 @Injectable()
 export class ProxyConnectService {
@@ -48,9 +48,21 @@ export class ProxyConnectService {
 
     const proxyRequest = connectionClient.request(options);
 
-    proxyRequest.on('connect', (proxyRes, proxySocket) => {
-      //this.logger.debug(`Connected through proxy: ${req.url}`);
+    clientSocket.on('error', (err) => {
+      this.logger.debug('Client socket error', err);
+      if (!clientSocket.destroyed) {
+        proxyRequest.destroy();
+        clientSocket.destroy();
+      }
+    });
+
+    proxyRequest.on('connect', (_proxyRes, proxySocket) => {
       clientSocket.write('HTTP/1.1 200 OK\r\n\r\n');
+
+      proxySocket.on('error', (err) => {
+        this.logger.debug('Proxy socket error', err);
+      });
+
       if (throttlingSpeed) {
         const throttleUploadStream = new Throttle({ rate: 125000 });
         const throttleDownloadStream = new Throttle({ rate: 125000 });
@@ -60,12 +72,18 @@ export class ProxyConnectService {
           proxySocket,
           throttleDownloadStream,
           clientSocket,
-          (err) => this.logger.debug('Error with proxy connection', err),
+          (err) => {
+            if (err) {
+              this.logger.debug('Error with proxy connection', err);
+            }
+          },
         );
       } else {
-        pipeline(clientSocket, proxySocket, clientSocket, (err) =>
-          this.logger.debug('Error with proxy connection', err),
-        );
+        pipeline(clientSocket, proxySocket, clientSocket, (err) => {
+          if (err) {
+            this.logger.debug('Error with proxy connection', err);
+          }
+        });
       }
     });
 
@@ -75,11 +93,6 @@ export class ProxyConnectService {
     });
 
     proxyRequest.end();
-
-    clientSocket.on('error', () => {
-      proxyRequest.destroy();
-      clientSocket.destroy();
-    });
   }
 
   private addProxyAuthToHeaders(
