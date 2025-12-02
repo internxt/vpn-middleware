@@ -48,7 +48,13 @@ export class ProxyRequestService {
       rejectUnauthorized: false,
     };
 
-    const proxyRequest = connectionClient.request(options);
+    const proxyRequest = connectionClient
+      .request(options)
+      .on('error', (err) => {
+        this.logger.error(`Proxy request error: ${err.message}`);
+        res.statusCode = 502;
+        res.end('Proxy request failed');
+      });
 
     proxyRequest.once('response', (proxyResponse) => {
       if (!proxyResponse.statusCode) {
@@ -81,12 +87,6 @@ export class ProxyRequestService {
           }
         });
       }
-    });
-
-    proxyRequest.on('error', (err) => {
-      this.logger.error(`Proxy request error: ${err.message}`);
-      res.statusCode = 502;
-      res.end('Proxy request failed');
     });
 
     req.on('error', (err) => {

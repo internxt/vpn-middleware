@@ -25,7 +25,6 @@ export class ProxyConnectService {
     throttlingSpeed?: number;
   }) {
     const url = new URL(proxyUrl);
-
     const connectionClient = url.protocol === 'https:' ? https : http;
 
     const headers = {
@@ -46,7 +45,42 @@ export class ProxyConnectService {
       rejectUnauthorized: false,
     };
 
-    const proxyRequest = connectionClient.request(options);
+    const proxyRequest = connectionClient
+      .request(options)
+      .on('error', (err) => {
+        this.logger.error(`CONNECT error: ${err.message}`);
+        clientSocket.end('Error connecting through proxy');
+      })
+      .on('connect', (_proxyRes, proxySocket) => {
+        clientSocket.write('HTTP/1.1 200 OK\r\n\r\n');
+
+        proxySocket.on('error', (err) => {
+          this.logger.debug('Proxy socket error', err);
+        });
+
+        if (throttlingSpeed) {
+          const throttleUploadStream = new Throttle({ rate: 125000 });
+          const throttleDownloadStream = new Throttle({ rate: 125000 });
+          pipeline(
+            clientSocket,
+            throttleUploadStream,
+            proxySocket,
+            throttleDownloadStream,
+            clientSocket,
+            (err) => {
+              if (err) {
+                this.logger.debug('Error with proxy connection', err);
+              }
+            },
+          );
+        } else {
+          pipeline(clientSocket, proxySocket, clientSocket, (err) => {
+            if (err) {
+              this.logger.debug('Error with proxy connection', err);
+            }
+          });
+        }
+      });
 
     clientSocket.on('error', (err) => {
       this.logger.debug('Client socket error', err);
@@ -54,42 +88,6 @@ export class ProxyConnectService {
         proxyRequest.destroy();
         clientSocket.destroy();
       }
-    });
-
-    proxyRequest.on('connect', (_proxyRes, proxySocket) => {
-      clientSocket.write('HTTP/1.1 200 OK\r\n\r\n');
-
-      proxySocket.on('error', (err) => {
-        this.logger.debug('Proxy socket error', err);
-      });
-
-      if (throttlingSpeed) {
-        const throttleUploadStream = new Throttle({ rate: 125000 });
-        const throttleDownloadStream = new Throttle({ rate: 125000 });
-        pipeline(
-          clientSocket,
-          throttleUploadStream,
-          proxySocket,
-          throttleDownloadStream,
-          clientSocket,
-          (err) => {
-            if (err) {
-              this.logger.debug('Error with proxy connection', err);
-            }
-          },
-        );
-      } else {
-        pipeline(clientSocket, proxySocket, clientSocket, (err) => {
-          if (err) {
-            this.logger.debug('Error with proxy connection', err);
-          }
-        });
-      }
-    });
-
-    proxyRequest.on('error', (err) => {
-      this.logger.error(`CONNECT error: ${err.message}`);
-      clientSocket.end('Error connecting through proxy');
     });
 
     proxyRequest.end();
