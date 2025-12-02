@@ -48,7 +48,13 @@ export class ProxyRequestService {
       rejectUnauthorized: false,
     };
 
-    const proxyRequest = connectionClient.request(options);
+    const proxyRequest = connectionClient
+      .request(options)
+      .on('error', (err) => {
+        this.logger.error(`Proxy request error: ${err.message}`);
+        res.statusCode = 502;
+        res.end('Proxy request failed');
+      });
 
     proxyRequest.once('response', (proxyResponse) => {
       if (!proxyResponse.statusCode) {
@@ -62,34 +68,48 @@ export class ProxyRequestService {
         `Proxying request to ${url.hostname} - Status: ${proxyResponse.statusCode}`,
       );
       res.writeHead(proxyResponse.statusCode, proxyResponse.headers);
+
+      proxyResponse.on('error', (err) => {
+        this.logger.debug('Proxy response error', err);
+      });
+
       if (throttlingSpeed) {
         const throttleDownloadStream = new Throttle({ rate: 125000 });
-        pipeline(proxyResponse, throttleDownloadStream, res, (err) =>
-          this.logger.error('Error with proxy connection', err),
-        );
+        pipeline(proxyResponse, throttleDownloadStream, res, (err) => {
+          if (err) {
+            this.logger.error('Error with proxy connection', err);
+          }
+        });
       } else {
-        proxyResponse.pipe(res);
+        pipeline(proxyResponse, res, (err) => {
+          if (err) {
+            this.logger.error('Error with proxy connection', err);
+          }
+        });
       }
     });
 
-    proxyRequest.on('error', (err) => {
-      this.logger.error(`Proxy request error: ${err.message}`);
-      res.statusCode = 502;
-      res.end('Proxy request failed');
-    });
-
-    req.on('error', () => {
-      proxyRequest.destroy();
-      req.destroy();
+    req.on('error', (err) => {
+      this.logger.debug('Request error', err);
+      if (!req.destroyed) {
+        proxyRequest.destroy();
+        req.destroy();
+      }
     });
 
     if (throttlingSpeed) {
       const throttleUploadStream = new Throttle({ rate: 125000 });
-      pipeline(req, throttleUploadStream, proxyRequest, (err) =>
-        this.logger.error('Error with proxy connection', err),
-      );
+      pipeline(req, throttleUploadStream, proxyRequest, (err) => {
+        if (err) {
+          this.logger.error('Error with proxy connection', err);
+        }
+      });
     } else {
-      req.pipe(proxyRequest);
+      pipeline(req, proxyRequest, (err) => {
+        if (err) {
+          this.logger.error('Error with proxy connection', err);
+        }
+      });
     }
   }
 
