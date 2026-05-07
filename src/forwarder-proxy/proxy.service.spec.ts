@@ -104,6 +104,8 @@ describe('ForwardProxyServer', () => {
     });
 
     it('should return null if basic auth content is malformed', async () => {
+      mockAuthService.verifyProxyToken.mockResolvedValue(null);
+
       expect(
         await service['decodeUserFromToken']('Basic invalidbase64'),
       ).toBeNull();
