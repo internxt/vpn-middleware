@@ -19,6 +19,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: new ConsoleLogger({
       colors: config.isDevelopment,
+      json: !config.isDevelopment,
       prefix: 'Proxy-api',
       compact: true,
       logLevels: config.isDevelopment ? ['debug'] : ['log'],
@@ -41,6 +42,11 @@ async function bootstrap() {
   const documentFactory = () =>
     SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api', app, documentFactory);
+
+  // Higher than Traefik idleConnTimeout (90s default) 
+  const httpServer = app.getHttpServer();
+  httpServer.keepAliveTimeout = 95_000;
+  httpServer.headersTimeout = 96_000;
 
   await Promise.all([
     await app.listen(process.env.PORT ?? 3001),
