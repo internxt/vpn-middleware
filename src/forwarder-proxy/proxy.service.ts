@@ -41,6 +41,7 @@ export class ForwardProxyServer {
         );
 
         if (!decodedToken) {
+          this.logIfInvalidAuthHeader(req);
           res.writeHead(407, { 'Proxy-Authenticate': 'Basic realm="Proxy"' });
           res.end('407 Invalid token, proxy authentication required');
           return;
@@ -80,6 +81,7 @@ export class ForwardProxyServer {
         );
 
         if (!decodedToken) {
+          this.logIfInvalidAuthHeader(req);
           socket.write('HTTP/1.1 407 Proxy Authentication Required\r\n');
           socket.write('Proxy-Authenticate: Basic realm="Proxy"\r\n');
           socket.write('\r\n');
@@ -170,7 +172,6 @@ export class ForwardProxyServer {
     this.logger.debug('Decoding auth token', authHeader);
     const authPrefix = 'Basic ';
     if (!authHeader || !authHeader.startsWith(authPrefix)) {
-      this.logger.error('Invalid auth header');
       return null;
     }
 
@@ -196,6 +197,16 @@ export class ForwardProxyServer {
     const isFreeUser = user.tiers.some((tier) => this.isFreeTier(tier));
 
     return { region, data: user, isFreeUser };
+  }
+
+  private logIfInvalidAuthHeader(req: http.IncomingMessage) {
+    const authHeader = req.headers['proxy-authorization'];
+    if (authHeader?.startsWith('Basic ')) return;
+    this.logger.error({
+      msg: 'Invalid auth header',
+      reason: authHeader ? 'wrong_scheme' : 'missing',
+      userAgent: req.headers['user-agent'],
+    });
   }
 
   private loadVpnConfigs() {
