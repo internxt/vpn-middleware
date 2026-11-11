@@ -190,7 +190,11 @@ export class ForwardProxyServer {
     }
 
     if (!user.zones.includes(region)) {
-      this.logger.error(`User does not have access to region: ${region}`);
+      this.logger.error({
+        msg: 'Zone not permitted',
+        requestedZone: region,
+        allowedZones: user.zones,
+      });
       throw new ZoneNotPermittedError(region);
     }
 
@@ -219,6 +223,7 @@ export class ForwardProxyServer {
     const credentials = this.vpns[region];
 
     if (!credentials) {
+      this.logger.error({ msg: 'No VPN config for zone', zone: region });
       return null;
     }
 
