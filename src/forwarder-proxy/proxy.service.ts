@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import http from 'http';
+import { Socket } from 'net';
 import { ProxyConnectService } from './method-handlers/connect-handler';
 import { ProxyRequestService } from './method-handlers/request-handler';
 import { AuthService } from '../modules/auth/auth.service';
@@ -10,6 +11,8 @@ import { UserEntity } from '../modules/users/entities/user.entity';
 import { ZoneNotPermittedError } from './errors/zone-not-permitted.error';
 import { TierEntity } from '../modules/users/entities/tier.entity';
 import { freeTierId } from '../modules/users/constants';
+
+const SOCKET_IDLE_TIMEOUT_MS = 5 * 60_000;
 
 @Injectable()
 export class ForwardProxyServer {
@@ -64,7 +67,13 @@ export class ForwardProxyServer {
       }
     });
 
-    server.on('connect', async (req, socket, head) => {
+    server.on('connect', async (req, socket: Socket) => {
+      // Node drops its own socket error listener before emitting 'connect'
+      socket.on('error', (err) => {
+        this.logger.debug('CONNECT client socket error', err);
+      });
+      socket.setTimeout(SOCKET_IDLE_TIMEOUT_MS, () => socket.destroy());
+
       try {
         const decodedToken = await this.decodeUserFromToken(
           req.headers['proxy-authorization'],
@@ -112,7 +121,7 @@ export class ForwardProxyServer {
       const decodedToken = await this.authService.verifyProxyToken(token);
       const { uuid, workspaces } = decodedToken;
 
-      this.logger.log(`Authenticating user: ${uuid}`);
+      this.logger.debug(`Authenticating user: ${uuid}`);
 
       let mainUser = await this.usersService.getUserAndTiers(uuid);
 

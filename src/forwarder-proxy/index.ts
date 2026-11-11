@@ -15,18 +15,18 @@ export async function bootstrapServer() {
   const logger = new Logger('ProxyBootstrap');
 
   process.on('uncaughtException', (error: Error) => {
-    logger.error('Uncaught Exception:', error);
-    logger.error(error.stack);
+    logger.error(`Uncaught Exception: ${error.message}`, error.stack);
   });
 
-  process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
-    logger.error('Unhandled Rejection at:', promise);
-    logger.error('Reason:', reason);
+  process.on('unhandledRejection', (reason: unknown) => {
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    logger.error(`Unhandled Rejection: ${error.message}`, error.stack);
   });
 
   const app = await NestFactory.createApplicationContext(ProxyModule, {
     logger: new ConsoleLogger({
       colors: config.isDevelopment,
+      json: !config.isDevelopment,
       prefix: 'Proxy-middleware',
       compact: true,
       logLevels: config.isDevelopment ? ['debug'] : ['log'],
